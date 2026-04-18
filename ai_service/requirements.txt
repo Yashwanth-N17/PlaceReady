@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-dotenv
+google-genai
+pypdf
+langchain-text-splitters
+pydantic
+python-multipart
+pandas
+openpyxl

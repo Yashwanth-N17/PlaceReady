@@ -1,58 +1,117 @@
-# 🎓 PlaceReady: Intelligent Placement Tracking System
+# 🚀 PlaceReady: AI-Powered Placement Mastery Ecosystem
 
-PlaceReady is a centralized, real-time platform designed to manage, monitor, and enhance student placement readiness through structured training and AI-powered performance tracking.
+PlaceReady is a high-performance, intelligent platform designed to bridge the gap between academic curriculum and corporate requirements. It leverages **Gemini 1.5 Pro/Flash** to provide real-time readiness analytics, behavioral tracking, and curriculum optimization.
 
-## 🚀 Getting Started
+---
+
+## 🏗️ Triple-Engine Architecture
+
+PlaceReady operates on a decentralized, multi-service architecture for maximum performance and AI scalability:
+
+1.  **Frontend (React/Vite)**: Premium UI with Cinema-Mode exam environments and detailed student performance radar charts.
+2.  **Core Backend (Node.js/Express)**: Handles business logic, RBAC security, and Prisma-based database orchestration.
+3.  **AI Service (Python/FastAPI)**: A dedicated service for heavy AI processing, PDF/Excel text extraction, and Gemini-powered tag correlation.
+
+---
+
+## 🔥 Key Technical Features
+
+### 1. High-Stakes Student Test Portal
+*   **Cinema-Mode UI**: A distraction-free, full-screen environment for assessments.
+*   **Behavioral Tracking**: Real-time detection of tab-switching and focus loss to calculate an "Integrity Score."
+*   **Mastery Radar Charts**: Multi-dimensional results showing readiness across specific technical tags.
+
+### 2. Faculty Big Data Lens
+*   **Curriculum Gap Matrix**: Heatmaps showing real-time departmental failure rates by specific topic tags (e.g., Pointer Arithmetic).
+*   **Readiness Lift AI**: Quantifies the potential improvement in the department's placement readiness if specific gaps are closed.
+*   **Cleanup Triggers**: Instant scheduling of "Review Sessions" for high-failure topics with one click.
+
+### 3. AI-Powered Test Extraction
+*   **Multi-Format Logic**: Upload question papers in **PDF** or **Excel** formats.
+*   **Gemini Engine**: Automatically extracts questions, maps technical tags, and identifies curriculum gaps during the scheduling phase.
+
+---
+
+## 🛠️ Setup Instructions
 
 ### 1. Prerequisites
-- Node.js (v18+)
-- PostgreSQL (or any Prisma-supported DB)
-- npm or yarn
+*   Node.js (v18+)
+*   Python (3.10+)
+*   PostgreSQL / MongoDB (Prisma Supported)
+*   **Gemini API Key** (Get it from [Google AI Studio](https://aistudio.google.com/))
 
-### 2. Installation
-Clone the repository and install dependencies for both frontend and backend.
+### 2. Service-Wise Installation
 
 ```bash
-# Backend
+# 1. CORE BACKEND
 cd backend
 npm install
+# Configure .env with DATABASE_URL, JWT_SECRET, and AI_SERVICE_URL=http://localhost:8000
 
-# Frontend
+# 2. FRONTEND
 cd ../frontend
 npm install
+
+# 3. AI SERVICE (Python)
+cd ../ai_service
+pip install -r requirements.txt
+# Configure .env with GEMINI_API_KEY=your_key_here
 ```
 
-### 3. Database Setup
-1. Create a `.env` file in the `backend` folder and add your `DATABASE_URL` and `JWT_SECRET`.
-2. Run migrations and the seed script to populate initial users.
+### 3. Running the Ecosystem
+Open three terminal windows and run:
+1.  **AI Service**: `cd ai_service && uvicorn main:app --port 8000`
+2.  **Backend**: `cd backend && npm run dev`
+3.  **Frontend**: `cd frontend && npm run dev`
 
-```bash
-npx prisma migrate dev --name init
-npx prisma db seed
-```
+---
 
-### 4. Running the Dev Servers
-```bash
-# In backend folder
-npm run dev
-
-# In frontend folder
-npm run dev
-```
-
-## 🔐 Credentials for Hackathon
+## 🔐 Credentials for Testing
 | Role | Email | Password |
 | :--- | :--- | :--- |
 | **Student** | student@placeready.com | password123 |
 | **Faculty** | faculty@placeready.com | password123 |
 | **Placement** | placement@placeready.com | password123 |
 
-## 🛠️ Tech Stack
-- **Frontend**: React, Tailwind CSS, Shadcn UI, Framer Motion, Recharts.
-- **Backend**: Node.js, Express, Prisma ORM, PostgreSQL.
-- **Security**: JWT (Access + Refresh Tokens), Bcrypt Hashing, Role-Based Access Control (RBAC).
+---
 
-## 📁 System Architecture
-- **Auth**: Dual-token system with HTTP-only Refresh Token cookies and rotating Access Tokens.
-- **API**: Functional Service-Controller pattern.
-- **Frontend**: Protected Routes with role-based filtering.
+## 📡 API Documentation (Technical Reference)
+
+### 1. Authentication
+*   **`POST /api/auth/login`**
+    *   **Body**: `{ "email": "...", "password": "...", "role": "STUDENT|FACULTY|PLACEMENT" }`
+    *   **Response**: `200 OK` + HTTP-only Cookie (`refreshToken`) + JSON `{ "accessToken": "...", "user": {...} }`
+*   **`GET /api/auth/me`** (Requires Token)
+    *   **Description**: Returns the current session user data.
+*   **`POST /api/auth/logout`**
+    *   **Description**: Clears the authentication cookies.
+
+### 2. AI & Faculty Operations
+*   **`POST /api/faculty/extract-metadata`** (Requires Faculty Role)
+    *   **Type**: `multipart/form-data`
+    *   **Body**: `file` (PDF or Excel)
+    *   **Response**: 
+      ```json
+      {
+        "success": true,
+        "data": {
+          "subject": "...",
+          "questions": [{ "question_text": "...", "tags": ["..."], "difficulty": "..." }],
+          "suggested_curriculum_gaps": ["..."]
+        }
+      }
+      ```
+
+### 3. Student Operations
+*   **`GET /api/student/quizzes`** (Requires Student Role)
+    *   **Description**: Retrieves scheduled tests based on the student's department/batch.
+*   **`POST /api/student/submit`** (Requires Student Role)
+    *   **Body**: `{ "testId": "...", "answers": { "q1": 0, "q2": 3 } }`
+
+---
+
+## 🧬 Tech Stack
+*   **Analytics**: Recharts, Framer Motion
+*   **AI Stack**: Google Generative AI (Gemini), FastAPI, Pandas, PyPDF
+*   **ORM**: Prisma (PostgreSQL/SQL)
+*   **Frontend**: Tailwind CSS, Shadcn UI, Lucide Icons
