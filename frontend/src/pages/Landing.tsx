@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { useEffect } from 'react';
+import { animateHero } from '../animations/heroAnimation';
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,7 +59,11 @@ const roles = [
   },
 ];
 
-const Landing = () => {
+const Landing = () => {useEffect(() => {
+  setTimeout(() => {
+    animateHero();
+  }, 100);
+}, []);
   return (
     <div className="min-h-screen hero-bg text-foreground">
       {/* NAV */}
@@ -94,7 +100,7 @@ const Landing = () => {
               <Sparkles className="h-3 w-3 text-primary" />
               AI-powered placement intelligence
             </div>
-            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter leading-[1.05]">
+            <h1 className="hero-title text-5xl md:text-7xl font-display font-bold tracking-tighter leading-[1.05]">
               Placement Readiness, <br className="hidden md:block" />
               <span className="text-primary">Zero Manual Effort</span>
             </h1>
