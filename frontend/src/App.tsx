@@ -16,6 +16,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentTests from "./pages/student/StudentTests";
 import StudentTraining from "./pages/student/StudentTraining";
+import TakeTest from "./pages/student/TakeTest";
 
 import FacultyDashboard from "./pages/faculty/FacultyDashboard";
 import Upload from "./pages/faculty/Upload";
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/student" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedRoute>} />
             <Route path="/student/tests" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentTests /></ProtectedRoute>} />
             <Route path="/student/training" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentTraining /></ProtectedRoute>} />
+            <Route path="/student/test/:id" element={<ProtectedRoute allowedRoles={["STUDENT"]}><TakeTest /></ProtectedRoute>} />
 
             {/* Faculty */}
             <Route path="/faculty" element={<ProtectedRoute allowedRoles={["FACULTY"]}><FacultyDashboard /></ProtectedRoute>} />
