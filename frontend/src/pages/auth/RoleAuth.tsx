@@ -1,10 +1,12 @@
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Mail, Lock, LucideIcon } from "lucide-react";
+import { ArrowLeft, Mail, Lock, LucideIcon, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { apiClient } from "@/api/client";
 
 interface Props {
   role: "student" | "faculty" | "placement";
@@ -18,10 +20,29 @@ interface Props {
 export const RoleAuth = ({ role, title, subtitle, icon: Icon, redirectTo, accentLabel }: Props) => {
   const navigate = useNavigate();
 
-  const submit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success(`Welcome, ${accentLabel}`);
-    setTimeout(() => navigate(redirectTo), 350);
+    setLoading(true);
+    
+    try {
+      const response = await apiClient.post("/auth/login", { email, password });
+      const { token, user } = response.data;
+      
+      localStorage.setItem("accessToken", token);
+      localStorage.setItem("userRole", user.role);
+
+      toast.success(`Welcome back, ${accentLabel}`);
+      setTimeout(() => navigate(redirectTo), 350);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,7 +50,7 @@ export const RoleAuth = ({ role, title, subtitle, icon: Icon, redirectTo, accent
       <div className="absolute inset-0 grid-pattern opacity-20" />
 
       <Link
-        to="/"
+        to="/login"
         className="absolute top-6 left-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" /> All portals
@@ -56,27 +77,50 @@ export const RoleAuth = ({ role, title, subtitle, icon: Icon, redirectTo, accent
               <Label htmlFor="email">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="email" type="email" required placeholder="you@college.edu" className="pl-9" />
+                <Input 
+                    id="email" 
+                    type="email" 
+                    required 
+                    placeholder="you@college.edu" 
+                    className="pl-9" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
             </div>
             <div className="space-y-1.5">
               <div className="flex justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link to="#" className="text-xs text-primary hover:underline">Forgot?</Link>
+                <Link to="/auth/reset-password" title="Contact admin if you forgot your credentials" className="text-xs text-primary hover:underline">Forgot?</Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="password" type="password" required placeholder="••••••••" className="pl-9" />
+                <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"} 
+                    required 
+                    placeholder="••••••••" 
+                    className="pl-9 pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
-            <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-              Sign in to {accentLabel}
+            <Button type="submit" disabled={loading} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+              {loading ? "Authenticating..." : `Sign in to ${accentLabel}`}
             </Button>
           </form>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
-            Don't have an account? <Link to="#" onClick={() => toast.info("Registration is handled by campus administrators.")} className="text-primary hover:underline font-medium">Sign up</Link>
+            Contact your campus administrator for account issues.
           </p>
         </div>
 

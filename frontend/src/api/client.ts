@@ -1,37 +1,54 @@
 import axios from "axios";
+import { toast } from "sonner";
 
-/**
- * Global axios instance for communicating with the backend.
- * Uses VITE_API_URL or defaults to localhost:5000.
- */
+const API_URL = "http://localhost:3000/api";
+
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
-  timeout: 5000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: API_URL,
+  withCredentials: true, 
 });
 
-/**
- * High-level wrapper that executes an API call and gracefully falls back
- * to provided mock data if the network request fails or the backend is offline.
- *
- * @param request Function that executes the axios call
- * @param fallbackData Static mock data to return on failure
- */
-export async function withFallback<T>(
-  request: () => Promise<{ data: T }>,
-  fallbackData: T
-): Promise<T> {
-  try {
-    const response = await request();
-    // In a real app, maybe we'd validate response.status here
-    return response.data;
-  } catch (error) {
-    // Only log warning if not in production to keep console clean for users
-    if (import.meta.env.DEV) {
-      console.warn("Backend unreachable or request failed. Falling back to mock data.", error);
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const res = await axios.get(`${API_URL}/auth/refresh`, { withCredentials: true });
+        const { token } = res.data;
+
+        localStorage.setItem("accessToken", token);
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        localStorage.removeItem("accessToken");
+        window.location.href = "/login";
+        return Promise.reject(refreshError);
+      }
     }
+
+    return Promise.reject(error);
+  }
+);
+
+export const withFallback = async <T>(apiCall: () => Promise<T>, fallbackData: T): Promise<T> => {
+  try {
+    const response = await apiCall();
+    return (response as any).data || response;
+  } catch (error) {
+    console.warn("Backend route not found or error occurred. Using mock/fallback data.");
     return fallbackData;
   }
-}
+};

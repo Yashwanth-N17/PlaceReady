@@ -21,6 +21,9 @@
     "dev": "nodemon server.js",
     "start": "node server.js"
   },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "name": "backend",
   "version": "1.0.0",
   "description": "",
