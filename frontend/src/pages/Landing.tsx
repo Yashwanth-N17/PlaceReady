@@ -33,7 +33,7 @@ const fadeUp = {
 const roles = [
   {
     id: "student",
-    title: "I'm a Student",
+    title: "Student",
     desc: "Track your readiness score, weak areas, and personalized training paths.",
     icon: GraduationCap,
     href: "/student/login",
@@ -41,7 +41,7 @@ const roles = [
   },
   {
     id: "faculty",
-    title: "I'm Faculty",
+    title: "Faculty",
     desc: "Monitor batch performance, identify gaps, and upload student data effortlessly.",
     icon: Users,
     href: "/faculty/login",
@@ -49,7 +49,7 @@ const roles = [
   },
   {
     id: "placement",
-    title: "I'm a Placement Officer",
+    title: "Placement Officer",
     desc: "Match students to companies, generate shortlists, and track placement trends.",
     icon: Briefcase,
     href: "/placement/login",
@@ -69,7 +69,7 @@ const Landing = () => {
             </div>
             <span className="font-display font-bold tracking-tight">PlaceReady</span>
           </Link>
-          <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
+          <div className="hidden md:flex items-center gap-8 text-base text-muted-foreground">
             <a href="#roles" className="hover:text-foreground transition-colors">For Roles</a>
             <a href="#problem" className="hover:text-foreground transition-colors">Problem</a>
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -90,7 +90,7 @@ const Landing = () => {
         <div className="absolute inset-0 grid-pattern opacity-30" />
         <div className="container relative">
           <motion.div {...fadeUp} className="mx-auto max-w-4xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs text-muted-foreground mb-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-3 py-1 text-sm text-muted-foreground mb-6">
               <Sparkles className="h-3 w-3 text-primary" />
               AI-powered placement intelligence
             </div>
@@ -98,7 +98,7 @@ const Landing = () => {
               Placement Readiness, <br className="hidden md:block" />
               <span className="text-primary">Zero Manual Effort</span>
             </h1>
-            <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            <p className="mt-6 text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               One unified platform for student performance, training, and placement coordination —
               built to replace scattered Excel sheets, forms, and notebooks.
             </p>
@@ -109,11 +109,8 @@ const Landing = () => {
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </a>
-              <Button size="lg" variant="outline" className="border-border bg-secondary/30 backdrop-blur-sm">
-                Watch Demo
-              </Button>
             </div>
-            <div className="mt-12 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
+            <div className="mt-12 flex flex-wrap justify-center gap-x-8 gap-y-3 text-base text-muted-foreground">
               {["Bulk Excel import", "Role-based access", "Real-time analytics", "AI insights"].map((t) => (
                 <div key={t} className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-success" />
@@ -129,11 +126,11 @@ const Landing = () => {
       <section id="roles" className="py-20 border-t border-border/50">
         <div className="container">
           <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-12">
-            <p className="text-sm font-medium uppercase tracking-widest text-primary mb-3">Get started</p>
+            <p className="text-base font-medium uppercase tracking-widest text-primary mb-3">Get started</p>
             <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
               Pick your portal
             </h2>
-            <p className="mt-3 text-muted-foreground">
+            <p className="mt-3 text-lg text-muted-foreground leading-relaxed">
               Each role gets a dedicated workspace tailored to its workflow.
             </p>
           </motion.div>
@@ -156,8 +153,8 @@ const Landing = () => {
                         <r.icon className="h-6 w-6" />
                       </div>
                       <h3 className="mt-5 text-2xl font-display font-semibold">{r.title}</h3>
-                      <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{r.desc}</p>
-                      <div className="mt-6 inline-flex items-center text-sm font-medium text-primary">
+                      <p className="mt-2 text-base text-muted-foreground leading-relaxed">{r.desc}</p>
+                      <div className="mt-6 inline-flex items-center text-base font-medium text-primary">
                         Continue <ArrowUpRight className="ml-1 h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                       </div>
                     </div>
@@ -173,11 +170,11 @@ const Landing = () => {
       <section id="problem" className="py-24 border-t border-border/50">
         <div className="container">
           <motion.div {...fadeUp} className="max-w-2xl">
-            <p className="text-sm font-medium uppercase tracking-widest text-primary mb-3">The Problem</p>
+            <p className="text-base font-medium uppercase tracking-widest text-primary mb-3">The Problem</p>
             <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
               Placement prep today is broken
             </h2>
-            <p className="mt-4 text-muted-foreground text-lg">
+            <p className="mt-4 text-muted-foreground text-xl leading-relaxed">
               Colleges juggle dozens of spreadsheets, lose visibility into actual readiness, and rely on CGPA
               instead of skills.
             </p>
@@ -202,7 +199,7 @@ const Landing = () => {
                   <p.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-4 text-xl font-display font-semibold">{p.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
+                <p className="mt-2 text-base text-muted-foreground leading-relaxed">{p.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -213,7 +210,7 @@ const Landing = () => {
       <section id="impact" className="py-24 border-t border-border/50">
         <div className="container">
           <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
-            <p className="text-sm font-medium uppercase tracking-widest text-primary mb-3">Impact</p>
+            <p className="text-base font-medium uppercase tracking-widest text-primary mb-3">Impact</p>
             <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
               Numbers that move the needle
             </h2>
@@ -232,8 +229,8 @@ const Landing = () => {
                 className="glass-card rounded-xl p-8"
               >
                 <p className="text-6xl font-display font-bold tracking-tight text-primary">{m.value}</p>
-                <h3 className="mt-3 font-display font-semibold text-lg">{m.label}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{m.desc}</p>
+                <h3 className="mt-3 font-display font-semibold text-xl">{m.label}</h3>
+                <p className="mt-2 text-base text-muted-foreground leading-relaxed">{m.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -244,7 +241,7 @@ const Landing = () => {
       <section id="features" className="py-24 border-t border-border/50">
         <div className="container">
           <motion.div {...fadeUp} className="max-w-2xl mx-auto text-center mb-16">
-            <p className="text-sm font-medium uppercase tracking-widest text-primary mb-3">Features</p>
+            <p className="text-base font-medium uppercase tracking-widest text-primary mb-3">Features</p>
             <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
               Built for every role
             </h2>
@@ -272,7 +269,7 @@ const Landing = () => {
                   <f.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-4 font-display font-semibold">{f.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{f.desc}</p>
+                <p className="mt-2 text-base text-muted-foreground leading-relaxed">{f.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -289,7 +286,7 @@ const Landing = () => {
             <h2 className="text-3xl md:text-5xl font-display font-bold tracking-tight max-w-2xl mx-auto">
               Ready to <span className="text-primary">transform</span> placement prep?
             </h2>
-            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
+            <p className="mt-4 text-muted-foreground max-w-xl mx-auto text-lg leading-relaxed">
               Join the colleges already running placement seasons on autopilot.
             </p>
             <a href="#roles" className="inline-block mt-8">
@@ -312,11 +309,11 @@ const Landing = () => {
                 </div>
                 <span className="font-display font-bold">PlaceReady</span>
               </Link>
-              <p className="mt-3 text-sm text-muted-foreground max-w-xs">
+              <p className="mt-3 text-base text-muted-foreground max-w-xs leading-relaxed">
                 AI-powered placement readiness for the modern campus.
               </p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-base">
               <div>
                 <p className="font-semibold mb-3">Product</p>
                 <ul className="space-y-2 text-muted-foreground">
@@ -343,7 +340,7 @@ const Landing = () => {
               </div>
             </div>
           </div>
-          <div className="mt-12 pt-8 border-t border-border/50 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
+          <div className="mt-12 pt-8 border-t border-border/50 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
             <p>© 2026 PlaceReady. Built for campuses that ship.</p>
             <p>Made with intention.</p>
           </div>
