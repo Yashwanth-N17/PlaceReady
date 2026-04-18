@@ -53,7 +53,7 @@ const roles = [
     desc: "Match students to companies, generate shortlists, and track placement trends.",
     icon: Briefcase,
     href: "/placement/login",
-    accent: "from-success/20 to-success/5",
+    accent: "from-primary/20 to-primary/5",
   },
 ];
 
