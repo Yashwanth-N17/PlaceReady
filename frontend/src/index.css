@@ -1,0 +1,155 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Campus Placement Readiness — Design System
+   All colors HSL. Never hardcode in components.
+   ============================================ */
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 220 30% 6%;
+    --foreground: 220 15% 95%;
+
+    --card: 220 30% 9%;
+    --card-foreground: 220 15% 95%;
+
+    --popover: 220 32% 8%;
+    --popover-foreground: 220 15% 95%;
+
+    /* Brand — Cool blue/cyan */
+    --primary: 200 95% 55%;            /* bright cyan-blue */
+    --primary-foreground: 220 40% 8%;
+    --primary-glow: 190 90% 60%;       /* cyan glow */
+
+    --secondary: 220 25% 14%;
+    --secondary-foreground: 220 15% 95%;
+
+    --muted: 220 22% 13%;
+    --muted-foreground: 220 12% 65%;
+
+    --accent: 200 95% 55%;
+    --accent-foreground: 220 40% 8%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 220 15% 98%;
+
+    --success: 152 70% 50%;
+    --warning: 35 85% 55%;
+    --info: 210 100% 56%;
+
+    --border: 220 20% 18%;
+    --input: 220 22% 14%;
+    --ring: 200 95% 55%;
+
+    --radius: 0.875rem;
+
+    /* Glass + gradients */
+    --glass-bg: 220 30% 12% / 0.55;
+    --glass-border: 220 20% 30% / 0.4;
+    --gradient-primary: linear-gradient(135deg, hsl(200 95% 55%) 0%, hsl(190 90% 60%) 100%);
+    --gradient-hero: radial-gradient(ellipse at top, hsl(200 95% 55% / 0.10) 0%, transparent 60%),
+                     linear-gradient(180deg, hsl(220 35% 7%) 0%, hsl(220 30% 5%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(220 30% 12% / 0.6) 0%, hsl(220 30% 9% / 0.6) 100%);
+
+    /* Shadows */
+    --shadow-card: 0 2px 8px hsl(220 50% 2% / 0.4);
+    --shadow-elevated: 0 8px 24px hsl(220 50% 2% / 0.5);
+    --shadow-dialog: 0 16px 48px hsl(220 50% 2% / 0.65);
+    --shadow-glow: 0 0 40px hsl(200 95% 55% / 0.30);
+
+    /* Sidebar */
+    --sidebar-background: 220 35% 7%;
+    --sidebar-foreground: 220 15% 80%;
+    --sidebar-primary: 200 95% 55%;
+    --sidebar-primary-foreground: 220 40% 8%;
+    --sidebar-accent: 220 25% 12%;
+    --sidebar-accent-foreground: 220 15% 95%;
+    --sidebar-border: 220 20% 14%;
+    --sidebar-ring: 200 95% 55%;
+
+    /* Transitions */
+    --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Light mode (kept for completeness; app defaults to dark premium) */
+  .light {
+    --background: 220 20% 97%;
+    --foreground: 220 30% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 10%;
+    --primary: 35 85% 50%;
+    --primary-foreground: 220 40% 8%;
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 220 30% 10%;
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 15% 40%;
+    --accent: 35 85% 50%;
+    --accent-foreground: 220 40% 8%;
+    --border: 220 15% 88%;
+    --input: 220 15% 92%;
+    --ring: 35 85% 50%;
+    --sidebar-background: 220 20% 97%;
+    --sidebar-foreground: 220 25% 25%;
+    --sidebar-accent: 220 15% 92%;
+    --sidebar-accent-foreground: 220 30% 10%;
+    --sidebar-border: 220 15% 88%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  h1, h2, h3, h4, h5, h6 { @apply font-display tracking-tight; }
+
+  ::selection { background: hsl(var(--primary) / 0.3); color: hsl(var(--foreground)); }
+}
+
+@layer components {
+  .glass {
+    background: hsla(var(--glass-bg));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid hsla(var(--glass-border));
+  }
+  .glass-card {
+    background: var(--gradient-card);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
+  }
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .hero-bg { background: var(--gradient-hero); }
+  .grid-pattern {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.4) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.4) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at center, hsl(0 0% 0%) 30%, transparent 75%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
