@@ -9,8 +9,12 @@ const cookieOptions = {
 
 export async function login(req, res) {
     try {
-        const { email, password } = req.body;
-        const { accessToken, refreshToken, user } = await authService.loginUser(email, password);
+        const { email, password, role } = req.body;
+        const { user, accessToken, refreshToken } = await authService.loginUser({ 
+            email, 
+            password, 
+            requiredRole: role 
+        });
 
         res.cookie("refreshToken", refreshToken, cookieOptions);
 

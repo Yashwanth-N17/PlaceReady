@@ -30,7 +30,11 @@ export const RoleAuth = ({ role, title, subtitle, icon: Icon, redirectTo, accent
     setLoading(true);
     
     try {
-      const response = await apiClient.post("/auth/login", { email, password });
+      const response = await apiClient.post("/auth/login", { 
+        email, 
+        password,
+        role: role.toUpperCase() 
+      });
       const { token, user } = response.data;
       
       localStorage.setItem("accessToken", token);

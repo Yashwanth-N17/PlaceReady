@@ -2,15 +2,19 @@ import { prisma } from "../config/db.js";
 import { comparePassword, hashPassword } from "../utils/hash.js";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/token.js";
 
-export async function loginUser(email, password) {
+export async function loginUser({ email, password, requiredRole }) {
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    throw { status: 401, message: "Invalid credentials" };
+
+  if (!user || !(await comparePassword(password, user.password))) {
+    throw { status: 401, message: "Invalid email or password" };
   }
 
-  const isMatch = await comparePassword(password, user.password);
-  if (!isMatch) {
-    throw { status: 401, message: "Invalid credentials" };
+  // Role check: Ensure the user belongs to this portal
+  if (requiredRole && user.role.toUpperCase() !== requiredRole.toUpperCase()) {
+    throw { 
+        status: 403, 
+        message: `This account does not have ${requiredRole} access. Please use the correct portal.` 
+    };
   }
 
   const accessToken = generateAccessToken({ id: user.id, email: user.email, role: user.role });
