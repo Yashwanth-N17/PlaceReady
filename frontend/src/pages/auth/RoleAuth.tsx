@@ -76,7 +76,7 @@ export const RoleAuth = ({ role, title, subtitle, icon: Icon, redirectTo, accent
           </form>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
-            Need access? Contact your campus admin.
+            Don't have an account? <Link to="#" onClick={() => toast.info("Registration is handled by campus administrators.")} className="text-primary hover:underline font-medium">Sign up</Link>
           </p>
         </div>
 

@@ -9,6 +9,7 @@ import Landing from "./pages/Landing";
 import StudentLogin from "./pages/auth/StudentLogin";
 import FacultyLogin from "./pages/auth/FacultyLogin";
 import PlacementLogin from "./pages/auth/PlacementLogin";
+import LoginSelection from "./pages/auth/LoginSelection";
 
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentTests from "./pages/student/StudentTests";
@@ -40,6 +41,7 @@ const App = () => (
         <AnimatePresence mode="wait">
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<LoginSelection />} />
 
             <Route path="/student/login" element={<StudentLogin />} />
             <Route path="/faculty/login" element={<FacultyLogin />} />

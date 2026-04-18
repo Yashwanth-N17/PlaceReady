@@ -76,7 +76,11 @@ const Landing = () => {
             <a href="#impact" className="hover:text-foreground transition-colors">Impact</a>
           </div>
           <div className="flex items-center gap-2">
-            <Link to="#roles"><Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">Sign in</Button></Link>
+            <Link to="/login">
+              <Button size="sm" variant="outline" className="border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-medium px-5">
+                Sign in
+              </Button>
+            </Link>
           </div>
         </div>
       </nav>
@@ -318,7 +322,7 @@ const Landing = () => {
                 <ul className="space-y-2 text-muted-foreground">
                   <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
                   <li><a href="#impact" className="hover:text-foreground transition-colors">Impact</a></li>
-                  <li><a href="#roles" className="hover:text-foreground transition-colors">Sign in</a></li>
+                  <li><Link to="/login" className="hover:text-foreground transition-colors">Sign in</Link></li>
                 </ul>
               </div>
               <div>
