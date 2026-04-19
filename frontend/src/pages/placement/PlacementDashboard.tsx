@@ -32,21 +32,19 @@ const PlacementDashboard = () => {
     PlacementAPI.trends().then(setTrends);
   }, []);
 
-  const totalApplicants = drives.reduce((s, d) => s + d.applicantIds.length, 0);
-  const offers = drives.reduce(
-    (s, d) => s + Object.values(d.applicantStatus).filter((x) => x === "offered").length, 0,
-  );
-  const upcomingDrives = drives.filter((d) => d.status !== "completed").length;
+  const totalApplicants = drives.reduce((s, d: any) => s + (d.applicantCount ?? 0), 0);
+  const offers = drives.reduce((s, d: any) => s + (d.offersCount ?? 0), 0);
+  const upcomingDrives = drives.filter((d) => d.status !== "COMPLETED").length;
 
   const exportSummary = () => {
-    const rows = drives.map((d) => {
+    const rows = drives.map((d: any) => {
       const co = companies.find((c) => c.id === d.companyId);
       return {
-        Drive: co?.name ?? d.companyId,
+        Drive: d.title || co?.name || "Drive",
         Date: new Date(d.date).toLocaleDateString(),
         Status: d.status,
-        Applicants: d.applicantIds.length,
-        Offers: Object.values(d.applicantStatus).filter((x) => x === "offered").length,
+        Applicants: d.applicantCount ?? 0,
+        Offers: d.offersCount ?? 0,
       };
     });
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -151,15 +149,15 @@ const PlacementDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {drives.map((d) => {
+              {drives.map((d: any) => {
                 const co = companies.find((c) => c.id === d.companyId);
-                const o = Object.values(d.applicantStatus).filter((x) => x === "offered").length;
+                const o = d.offersCount ?? 0;
                 return (
                   <tr key={d.id} className="border-b border-border/50 last:border-0 hover:bg-secondary/30 transition-colors">
                     <td className="py-3 font-medium">{co?.name}</td>
                     <td className="py-3 text-muted-foreground">{new Date(d.date).toLocaleDateString()}</td>
-                    <td className="py-3 text-muted-foreground hidden md:table-cell">{d.venue}</td>
-                    <td className="py-3">{d.applicantIds.length}</td>
+                    <td className="py-3 text-muted-foreground hidden md:table-cell">{d.venue || d.location}</td>
+                    <td className="py-3">{d.applicantCount ?? 0}</td>
                     <td className="py-3 font-display font-semibold text-success">{o}</td>
                     <td className="py-3">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium border ${

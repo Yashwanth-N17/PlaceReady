@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { StudentAPI } from "@/api";
+import { StudentAPI, AssessmentAPI } from "@/api";
 import { ExamEnvironment } from "@/components/ExamEnvironment";
 import type { ScheduledTest } from "@/data/mock";
 import { motion } from "framer-motion";
@@ -13,14 +13,22 @@ const TakeTest = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, you'd fetch by ID. Here we find in the mock list.
-    StudentAPI.tests().then(tests => {
-      const found = tests.find(t => t.id === id);
-      if (found) {
-        setTest(found);
-      }
-      setLoading(false);
-    });
+    if (id) {
+       setLoading(true);
+       AssessmentAPI.getById(id)
+         .then(res => {
+           if (res.success) {
+              setTest({
+                id: res.data.id,
+                title: res.data.title,
+                subject: res.data.subject,
+                durationMin: res.data.duration,
+                questionsCount: res.data.questions?.length
+              });
+           }
+         })
+         .finally(() => setLoading(false));
+    }
   }, [id]);
 
   if (loading) {

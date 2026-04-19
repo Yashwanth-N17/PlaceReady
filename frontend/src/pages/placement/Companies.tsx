@@ -125,11 +125,11 @@ const Companies = () => {
             className="glass-card rounded-xl p-5 hover:shadow-elevated transition-all"
           >
             <div className="flex items-start gap-3">
-              <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center text-lg font-bold text-primary-foreground shadow-glow">
-                {c.name[0]}
+              <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center text-lg font-bold text-primary-foreground shadow-glow shrink-0">
+                {(c.name || "?")[0]}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-display font-semibold">{c.name}</h3>
+                <h3 className="font-display font-semibold truncate">{c.name || "Unnamed Company"}</h3>
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <Briefcase className="h-3 w-3" /> {c.role} · <span className="text-primary font-medium">{c.ctc}</span>
                 </p>
@@ -138,12 +138,12 @@ const Companies = () => {
             <div className="grid grid-cols-2 gap-2 mt-4 text-xs">
               <div className="rounded bg-secondary/40 px-2 py-1.5"><span className="text-muted-foreground">CGPA</span> <span className="font-semibold float-right">{c.minCgpa}+</span></div>
               <div className="rounded bg-secondary/40 px-2 py-1.5"><span className="text-muted-foreground">Readiness</span> <span className="font-semibold float-right">{c.minReadiness}+</span></div>
-              <div className="rounded bg-secondary/40 px-2 py-1.5"><span className="text-muted-foreground">Aptitude</span> <span className="font-semibold float-right">{c.minApt}+</span></div>
+              <div className="rounded bg-secondary/40 px-2 py-1.5"><span className="text-muted-foreground">Aptitude</span> <span className="font-semibold float-right">{c.minCgpa}+</span></div>
               <div className="rounded bg-secondary/40 px-2 py-1.5"><span className="text-muted-foreground">Coding</span> <span className="font-semibold float-right">{c.minCode}+</span></div>
             </div>
             <div className="mt-3 flex flex-wrap gap-1">
-              {c.branches.map((b) => <Badge key={b} variant="outline" className="text-[10px]">{b}</Badge>)}
-              {c.requiredSkills.map((s) => <Badge key={s} className="text-[10px] bg-primary/15 text-primary border-primary/30">{s}</Badge>)}
+              {(c.branches || []).map((b) => <Badge key={b} variant="outline" className="text-[10px]">{b}</Badge>)}
+              {(c.requiredSkills || []).map((s) => <Badge key={s} className="text-[10px] bg-primary/15 text-primary border-primary/30">{s}</Badge>)}
             </div>
           </motion.div>
         ))}

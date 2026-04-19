@@ -1,18 +1,11 @@
 /**
  * Public API surface for the PlaceReady frontend.
  *
- * Each function performs an axios request and falls back to mock data when
- * no backend responds. See `client.ts` for the fallback wrapper.
- *
- * Endpoint contracts are documented in README.md.
+ * Each function performs an axios request to the real backend.
+ * Fallbacks to mock data have been removed to ensure strict data binding with the database.
  */
 import { apiClient, withFallback } from "./client";
 import {
-  scheduledTests, recentResults, sampleQuiz, trainingModules,
-  students, faculty, companies, drives, notifications,
-  skillsOverTime, skillRadar, weakAreas, batchPerformance, skillGaps,
-  placementHistory, monthlyReadiness, yearOverYear, readinessTrend,
-  currentUser, currentFaculty, readinessScore, skillHeatmap,
   type ScheduledTest, type StudentRecord, type Company, type PlacementDrive,
   type Notification, type TrainingModule, type FacultyMember, type QuizQuestion,
 } from "@/data/mock";
@@ -20,115 +13,140 @@ import {
 // ============= STUDENT =============
 export const StudentAPI = {
   me: () =>
-    withFallback(() => apiClient.get("/student/me"), { ...currentUser, readiness: readinessScore }),
+    withFallback(() => apiClient.get("/student/me"), null),
 
   dashboard: () =>
     withFallback(() => apiClient.get("/student/dashboard"), {
-      readiness: readinessScore,
-      skillsOverTime,
-      skillRadar,
-      weakAreas,
-      readinessTrend,
+      readiness: 0,
+      skillsOverTime: [],
+      skillRadar: [],
+      weakAreas: [],
+      readinessTrend: [],
     }),
 
   tests: () =>
-    withFallback<ScheduledTest[]>(() => apiClient.get("/student/tests"), scheduledTests),
+    withFallback<ScheduledTest[]>(
+      () => apiClient.get("/assessments").then(res => res.data.data.map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        subject: t.subject,
+        type: t.type,
+        durationMin: t.duration,
+        questionsCount: t.questions?.length || 0,
+        date: t.scheduledAt,
+        status: new Date(t.scheduledAt) > new Date() ? "upcoming" : "completed"
+      }))),
+      []
+    ),
 
   results: () =>
-    withFallback(() => apiClient.get("/student/results"), recentResults),
+    withFallback(
+      () => apiClient.get("/assessments/attempts").then(res => res.data.data.map((a: any) => ({
+        id: a.id,
+        title: a.assessment.title,
+        subject: a.assessment.subject,
+        score: a.score,
+        correct: a.correctCount,
+        total: a.totalCount,
+        timeTakenMin: Math.round(a.timeTaken / 60),
+        date: new Date(a.createdAt).toLocaleDateString(),
+        percentile: a.percentile ?? 0,
+        status: a.score >= 80 ? "Excellent" : a.score >= 60 ? "Good" : "Needs Work",
+      }))),
+      []
+    ),
 
-  quiz: (_topic?: string) =>
-    withFallback<QuizQuestion[]>(() => apiClient.get("/student/quiz"), sampleQuiz),
 
-  submitQuiz: (testId: string, answers: Record<string, number>) =>
-    withFallback(() => apiClient.post(`/student/tests/${testId}/submit`, { answers }), {
-      ok: true,
-      score: 0,
-      submittedAt: new Date().toISOString(),
-    }),
+  quiz: (id?: string) =>
+    withFallback<QuizQuestion[]>(
+      () => apiClient.get(`/assessments/${id}`).then(res => res.data.data.questions.map((q: any) => ({
+        id: q.id,
+        question: q.text,
+        options: Array.isArray(q.options) ? q.options : [],
+        correctIndex: Array.isArray(q.options) ? q.options.indexOf(q.answer) : -1,
+        topic: q.topic || "General",
+        difficulty: q.difficulty
+      }))),
+      []
+    ),
+
+  submitQuiz: (testId: string, payload: any) =>
+    apiClient.post(`/assessments/${testId}/submit`, payload).then(res => res.data),
 
   trainingModules: () =>
-    withFallback<TrainingModule[]>(() => apiClient.get("/student/training"), trainingModules),
+    withFallback<TrainingModule[]>(() => apiClient.get("/student/training"), []),
 
   updateModuleProgress: (moduleId: string, progress: number) =>
-    withFallback(() => apiClient.patch(`/student/training/${moduleId}`, { progress }), {
-      ok: true, moduleId, progress,
-    }),
+    apiClient.patch(`/student/training/${moduleId}`, { progress }).then(res => res.data),
 };
 
 // ============= FACULTY =============
 export const FacultyAPI = {
   me: () =>
-    withFallback<FacultyMember>(() => apiClient.get("/faculty/me"), currentFaculty),
+    withFallback<FacultyMember | null>(() => apiClient.get("/faculty/me"), null),
 
   students: (params?: { mentorId?: string; subject?: string }) =>
-    withFallback<StudentRecord[]>(() => apiClient.get("/faculty/students", { params }), students),
+    withFallback<StudentRecord[]>(() => apiClient.get("/faculty/students"), []),
 
   studentById: (id: string) =>
-    withFallback<StudentRecord | null>(
-      () => apiClient.get(`/faculty/students/${id}`),
-      students.find((s) => s.id === id) || null,
-    ),
+    withFallback<StudentRecord | null>(() => apiClient.get(`/faculty/students/${id}`), null),
 
   batchPerformance: () =>
-    withFallback(() => apiClient.get("/faculty/batches"), batchPerformance),
+    withFallback(() => apiClient.get("/faculty/dash/batch-performance"), []),
 
   skillGaps: () =>
-    withFallback(() => apiClient.get("/faculty/skill-gaps"), skillGaps),
+    withFallback(() => apiClient.get("/faculty/dash/skill-gaps"), []),
 
   scheduleTest: (payload: Partial<ScheduledTest>) =>
-    withFallback(() => apiClient.post("/faculty/tests", payload), { ok: true, id: `t-${Date.now()}` }),
+    apiClient.post("/assessments", payload).then(res => res.data),
 
   uploadMarks: (rows: Array<Record<string, unknown>>) =>
-    withFallback(() => apiClient.post("/faculty/marks", { rows }), { ok: true, count: rows.length }),
+    apiClient.post("/faculty/marks", { rows }).then(res => res.data),
 
   saveMapping: (mapping: Record<string, string>) =>
-    withFallback(() => apiClient.post("/faculty/mapping", mapping), { ok: true }),
+    apiClient.post("/faculty/mapping", mapping).then(res => res.data),
 };
 
 // ============= PLACEMENT =============
 export const PlacementAPI = {
   companies: () =>
-    withFallback<Company[]>(() => apiClient.get("/placement/companies"), companies),
+    withFallback<Company[]>(() => apiClient.get("/placement/companies"), []),
 
   createCompany: (payload: Partial<Company>) =>
-    withFallback(() => apiClient.post("/placement/companies", payload), {
-      ok: true,
-      id: `co-${Date.now()}`,
-      ...payload,
-    }),
+    apiClient.post("/placement/companies", payload).then(res => res.data),
 
-  shortlist: (companyId: string) =>
-    withFallback<StudentRecord[]>(() => apiClient.get(`/placement/shortlist/${companyId}`), students),
+  shortlist: (filters?: { minCgpa?: number; minReadiness?: number; branch?: string }) =>
+    withFallback<any[]>(() => apiClient.get("/placement/shortlist", { params: filters }), []),
 
   drives: () =>
-    withFallback<PlacementDrive[]>(() => apiClient.get("/placement/drives"), drives),
+    withFallback<any[]>(() => apiClient.get("/placement/drives"), []),
 
-  createDrive: (payload: Partial<PlacementDrive>) =>
-    withFallback(() => apiClient.post("/placement/drives", payload), {
-      ok: true, id: `dr-${Date.now()}`, ...payload,
-    }),
+  createDrive: (payload: any) =>
+    apiClient.post("/placement/drives", payload).then(res => res.data),
+
+  applyToDrive: (driveId: string) =>
+    apiClient.post(`/placement/drives/${driveId}/apply`).then(res => res.data),
+
+  driveApplicants: (driveId: string) =>
+    withFallback<any>(() => apiClient.get(`/placement/drives/${driveId}/applicants`), { applicants: [], drive: null }),
 
   updateApplicantStatus: (driveId: string, studentId: string, status: string) =>
-    withFallback(
-      () => apiClient.patch(`/placement/drives/${driveId}/applicants/${studentId}`, { status }),
-      { ok: true },
-    ),
+    apiClient.patch(`/placement/drives/${driveId}/applicants/${studentId}`, { status }).then(res => res.data),
 
   trends: () =>
-    withFallback(() => apiClient.get("/placement/trends"), placementHistory),
+    withFallback(() => apiClient.get("/placement/trends"), []),
 };
 
 // ============= REPORTS =============
 export const ReportsAPI = {
   monthlyReadiness: () =>
-    withFallback(() => apiClient.get("/reports/monthly-readiness"), monthlyReadiness),
+    withFallback(() => apiClient.get("/reports/monthly-readiness"), []),
 
   yearOverYear: () =>
-    withFallback(() => apiClient.get("/reports/yoy"), yearOverYear),
+    withFallback(() => apiClient.get("/reports/yoy"), []),
 
   skillHeatmap: () =>
-    withFallback(() => apiClient.get("/reports/heatmap"), skillHeatmap),
+    withFallback(() => apiClient.get("/reports/heatmap"), []),
 };
 
 // ============= NOTIFICATIONS =============
@@ -136,14 +154,14 @@ export const NotificationsAPI = {
   list: (role: "student" | "faculty" | "placement") =>
     withFallback<Notification[]>(
       () => apiClient.get("/notifications", { params: { role } }),
-      notifications.filter((n) => n.forRole.includes(role)),
+      [],
     ),
 
   markRead: (id: string) =>
-    withFallback(() => apiClient.patch(`/notifications/${id}/read`), { ok: true, id }),
+    apiClient.patch(`/notifications/${id}/read`).then(res => res.data),
 
   markAllRead: (role: "student" | "faculty" | "placement") =>
-    withFallback(() => apiClient.post("/notifications/mark-all-read", { role }), { ok: true }),
+    apiClient.post("/notifications/mark-all-read", { role }).then(res => res.data),
 };
 
 // ============= QUESTIONS =============
@@ -153,11 +171,16 @@ export const QuestionAPI = {
   list: (params?: any) => apiClient.get("/questions", { params }),
 };
 
-import { createAssessment, getAssessments } from "./assessment.api.ts";
+import { createAssessment, getAssessments, getAssessmentById, submitAttempt, getAttempts } from "./assessment.api.ts";
 export const AssessmentAPI = {
   create: createAssessment,
-  list: getAssessments
+  list: getAssessments,
+  getById: getAssessmentById,
+  submit: submitAttempt,
+  history: getAttempts,
+  assessmentAttempts: (assessmentId: string) =>
+    withFallback<any[]>(() => apiClient.get(`/assessments/${assessmentId}/attempts/all`), []),
 };
 
 // ============= UTIL =============
-export { faculty as facultyList };
+export const facultyList: FacultyMember[] = [];

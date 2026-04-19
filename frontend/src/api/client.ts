@@ -43,12 +43,18 @@ apiClient.interceptors.response.use(
   }
 );
 
-export const withFallback = async <T>(apiCall: () => Promise<T>, fallbackData: T): Promise<T> => {
+export const withFallback = async <T>(apiCall: () => Promise<any>, defaultValue: T): Promise<T> => {
   try {
     const response = await apiCall();
-    return (response as any).data || response;
+    // If backend returns { success: true, data: T }, unwrap 'data'
+    // Else if axios returns { data: T }, unwrap 'data'
+    const payload = response.data || response;
+    if (payload && typeof payload === 'object' && 'data' in payload && payload.success) {
+      return payload.data;
+    }
+    return payload || defaultValue;
   } catch (error) {
-    console.warn("Backend route not found or error occurred. Using mock/fallback data.");
-    return fallbackData;
+    console.error("API Call failed:", error);
+    return defaultValue; 
   }
 };

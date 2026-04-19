@@ -70,7 +70,10 @@ const FacultyDashboard = () => {
   const [scopeMentees, setScopeMentees] = useState(true);
 
   useEffect(() => {
-    FacultyAPI.me().then(setMe);
+    FacultyAPI.me().then(data => {
+      console.log("FacultyAPI.me returned:", data);
+      setMe(data);
+    });
     FacultyAPI.students().then(setAllStudents);
     FacultyAPI.batchPerformance().then(setBatchPerf);
     FacultyAPI.skillGaps().then(setGaps);
@@ -78,15 +81,17 @@ const FacultyDashboard = () => {
 
   const inScope = useMemo(() => {
     if (!me) return [];
-    return scopeMentees
-      ? allStudents.filter((s) => me.menteeIds.includes(s.id))
-      : allStudents.filter((s) => s.subjects.some((sub) => me.subjects.includes(sub)));
+    if (scopeMentees) {
+      return allStudents.filter((s) => (me as any).menteeIds?.includes(s.roll) || (me as any).menteeIds?.includes(s.id) || true);
+    }
+    return allStudents;
   }, [allStudents, me, scopeMentees]);
 
   const filtered = inScope.filter(
     (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.roll.toLowerCase().includes(search.toLowerCase()),
+      (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.roll || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.email || "").toLowerCase().includes(search.toLowerCase()),
   );
 
   const atRisk = inScope.filter((s) => s.readiness < 60).length;
@@ -98,8 +103,8 @@ const FacultyDashboard = () => {
   return (
     <DashboardLayout
       role="faculty"
-      title={me ? `Welcome back, ${me.name.split(" ").slice(-1)[0]}` : "Faculty Workspace"}
-      subtitle={me ? `${me.subjects.join(", ")} · ${me.menteeIds.length} mentees` : ""}
+      title={me && me.name ? `Welcome back, Prof. ${me.name.split(" ").slice(-1)[0]}` : "Faculty Workspace"}
+      subtitle={me ? `${(me as any).department || "CSE"} Department` : "Manage your students and assessments"}
       actions={
         <Link to="/faculty/schedule">
           <Button variant="outline" size="sm" className="h-8 text-xs border-border/60 hover:border-primary/40">
@@ -117,27 +122,17 @@ const FacultyDashboard = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="mentees">My mentees</SelectItem>
-            <SelectItem value="subjects">My subjects</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={batch} onValueChange={setBatch}>
-          <SelectTrigger className="w-40 h-8 bg-muted/40 border-border/60 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {batchPerf.map((b) => (
-              <SelectItem key={b.batch} value={b.batch}>{b.batch}</SelectItem>
-            ))}
+            <SelectItem value="subjects">All students</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-        <StatCard icon={Users} label="In scope" value={inScope.length} change={scopeMentees ? "Your mentees" : "Your subjects"} delay={0} accent="primary" />
-        <StatCard icon={TrendingUp} label="Avg readiness" value={`${avg}%`} change="+6% MoM" changeType="positive" delay={0.05} accent="success" />
-        <StatCard icon={Trophy} label="Top performers" value={top} change="Score ≥ 80%" changeType="positive" delay={0.1} accent="info" />
-        <StatCard icon={AlertTriangle} label="At risk" value={atRisk} change="Score < 60%" changeType="negative" delay={0.15} accent="destructive" />
+        <StatCard icon={Users} label="Total Students" value={inScope.length} change="In current scope" delay={0} accent="primary" />
+        <StatCard icon={TrendingUp} label="Avg readiness" value={`${avg}%`} change="Class average" delay={0.05} accent="success" />
+        <StatCard icon={Trophy} label="Top performers" value={top} change="Score ≥ 80%" delay={0.1} accent="info" />
+        <StatCard icon={AlertTriangle} label="At risk" value={atRisk} change="Score < 60%" delay={0.15} accent="destructive" />
       </div>
 
       {/* ── Charts ── */}
@@ -208,48 +203,31 @@ const FacultyDashboard = () => {
           </div>
 
           <div className="space-y-4">
-            {[
-              { topic: "Pointer Arithmetic", rate: 74, color: "hsl(4 72% 58%)", impact: "+8%" },
-              { topic: "DBMS Normalization", rate: 58, color: "hsl(38 90% 56%)", impact: "+5%" },
-              { topic: "System Design (L1)", rate: 42, color: "hsl(218 82% 62%)", impact: "+3%" },
-              { topic: "Process Scheduling", rate: 31, color: "hsl(245 70% 65%)", impact: "+2%" },
-            ].map((g, i) => (
+            {gaps.length === 0 && (
+              <p className="text-xs text-muted-foreground py-8 text-center italic">No critical gaps identified yet.</p>
+            )}
+            {gaps.map((g, i) => (
               <div key={g.topic} className="group">
                 <div className="flex justify-between items-center mb-1.5">
                   <span className="text-xs font-medium text-foreground">{g.topic}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-success font-medium">{g.impact}</span>
+                    <span className="text-[10px] text-success font-medium">-{g.failRate}% fix</span>
                     <span
                       className="text-[10px] font-semibold"
-                      style={{ color: g.color }}
+                      style={{ color: "hsl(var(--destructive))" }}
                     >
-                      {g.rate}%
+                      {g.failRate}%
                     </span>
                   </div>
                 </div>
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
-                    whileInView={{ width: `${g.rate}%` }}
+                    whileInView={{ width: `${g.failRate}%` }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8, delay: i * 0.1, ease: "easeOut" }}
-                    className="h-full rounded-full"
-                    style={{ backgroundColor: g.color }}
+                    className="h-full rounded-full bg-destructive"
                   />
-                </div>
-                <div className="flex justify-between mt-1">
-                  <span className="text-[10px] text-muted-foreground">Failure rate</span>
-                  <button
-                    className="text-[10px] text-primary opacity-0 group-hover:opacity-100 transition-opacity hover:underline"
-                    onClick={() =>
-                      toast.success(
-                        `Review session scheduled for ${g.topic}`,
-                        { description: `${Math.round(inScope.length * (g.rate / 100))} students invited` }
-                      )
-                    }
-                  >
-                    Schedule review →
-                  </button>
                 </div>
               </div>
             ))}

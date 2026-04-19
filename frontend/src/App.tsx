@@ -16,12 +16,14 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentTests from "./pages/student/StudentTests";
 import StudentTraining from "./pages/student/StudentTraining";
+import StudentDrives from "./pages/student/StudentDrives";
 import TakeTest from "./pages/student/TakeTest";
 
 import FacultyDashboard from "./pages/faculty/FacultyDashboard";
 import Upload from "./pages/faculty/Upload";
 import MarksUpload from "./pages/faculty/MarksUpload";
 import ScheduleTests from "./pages/faculty/ScheduleTests";
+import ManualReview from "./pages/faculty/ManualReview";
 
 import PlacementDashboard from "./pages/placement/PlacementDashboard";
 import Companies from "./pages/placement/Companies";
@@ -55,6 +57,7 @@ const App = () => (
             <Route path="/student" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedRoute>} />
             <Route path="/student/tests" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentTests /></ProtectedRoute>} />
             <Route path="/student/training" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentTraining /></ProtectedRoute>} />
+            <Route path="/student/drives" element={<ProtectedRoute allowedRoles={["STUDENT"]}><StudentDrives /></ProtectedRoute>} />
             <Route path="/student/test/:id" element={<ProtectedRoute allowedRoles={["STUDENT"]}><TakeTest /></ProtectedRoute>} />
 
             {/* Faculty */}
@@ -63,6 +66,7 @@ const App = () => (
             <Route path="/faculty/students/:id" element={<ProtectedRoute allowedRoles={["FACULTY"]}><StudentProfile role="faculty" /></ProtectedRoute>} />
             <Route path="/faculty/marks" element={<ProtectedRoute allowedRoles={["FACULTY"]}><MarksUpload /></ProtectedRoute>} />
             <Route path="/faculty/schedule" element={<ProtectedRoute allowedRoles={["FACULTY"]}><ScheduleTests /></ProtectedRoute>} />
+            <Route path="/faculty/review" element={<ProtectedRoute allowedRoles={["FACULTY"]}><ManualReview /></ProtectedRoute>} />
             <Route path="/faculty/reports" element={<ProtectedRoute allowedRoles={["FACULTY"]}><Reports role="faculty" /></ProtectedRoute>} />
 
             {/* Placement */}

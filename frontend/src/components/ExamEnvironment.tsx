@@ -48,8 +48,10 @@ export const ExamEnvironment = ({ test, onClose }: Props) => {
   const focusLostRef = useRef(0);
   
   useEffect(() => {
-    StudentAPI.quiz().then(setQuestions);
-  }, []);
+    if (test.id) {
+       StudentAPI.quiz(test.id).then(setQuestions);
+    }
+  }, [test.id]);
 
   // Behavioral Tracking
   useEffect(() => {
@@ -112,7 +114,14 @@ export const ExamEnvironment = ({ test, onClose }: Props) => {
   const submit = (auto = false) => {
     if (submittedRef.current) return;
     submittedRef.current = true;
-    StudentAPI.submitQuiz(test.id, answers);
+    
+    const payload = {
+      answers,
+      timeTaken: totalSeconds - seconds,
+      focusLossCount: focusLostRef.current
+    };
+
+    StudentAPI.submitQuiz(test.id, payload);
     setPhase("result");
     setShowConfirmSubmit(false);
     if (auto) toast.warning("Time's up — auto-submitted");

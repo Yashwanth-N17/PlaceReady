@@ -21,6 +21,8 @@ model User {
   questions           Question[]
   createdAssessments  Assessment[]    @relation("CreatedAssessments")
   assignedAssessments Assessment[]    @relation("AssignedAssessments")
+  assessmentAttempts  AssessmentAttempt[]
+  appliedDrives       PlacementDrive[] @relation("DriveApplications")
 }
 
 model Question {
@@ -54,6 +56,57 @@ model Assessment {
   createdById  String
   createdBy    User       @relation("CreatedAssessments", fields: [createdById], references: [id])
   students     User[]     @relation("AssignedAssessments")
+  attempts     AssessmentAttempt[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model AssessmentAttempt {
+  id              String     @id @default(uuid())
+  score           Float
+  correctCount    Int
+  totalCount      Int
+  timeTaken       Int        // in seconds
+  focusLossCount  Int        @default(0)
+  answers         Json       // questionId -> response
+  
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  
+  assessmentId    String
+  assessment      Assessment @relation(fields: [assessmentId], references: [id])
+  
+  createdAt       DateTime   @default(now())
+}
+
+model Company {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  industry    String?
+  description String?
+  logoUrl     String?
+  website     String?
+  drives      PlacementDrive[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model PlacementDrive {
+  id           String     @id @default(uuid())
+  title        String
+  description  String?
+  date         DateTime
+  location     String?
+  role         String?    // e.g. Software Engineer
+  type         String     @default("FULL_TIME") // FULL_TIME, INTERNSHIP
+  status       String     @default("UPCOMING") // UPCOMING, ACTIVE, COMPLETED
+  salary       String?
+  
+  companyId    String
+  company      Company    @relation(fields: [companyId], references: [id])
+  
+  students     User[]     @relation("DriveApplications")
+  
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }

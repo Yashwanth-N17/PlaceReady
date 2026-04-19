@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { StudentAPI } from "@/api";
-import { currentUser } from "@/data/mock";
 
 /* ── Recharts tooltip style ── */
 const tooltipStyle = {
@@ -39,11 +38,13 @@ const CHART = {
 };
 
 const StudentDashboard = () => {
-  const [data, setData] = useState<Awaited<ReturnType<typeof StudentAPI.dashboard>> | null>(null);
-  const [tests, setTests] = useState<Awaited<ReturnType<typeof StudentAPI.tests>>>([]);
-  const [results, setResults] = useState<Awaited<ReturnType<typeof StudentAPI.results>>>([]);
+  const [user, setUser] = useState<{ name: string } | null>(null);
+  const [data, setData] = useState<any>(null);
+  const [tests, setTests] = useState<any[]>([]);
+  const [results, setResults] = useState<any[]>([]);
 
   useEffect(() => {
+    StudentAPI.me().then(setUser);
     StudentAPI.dashboard().then(setData);
     StudentAPI.tests().then(setTests);
     StudentAPI.results().then(setResults);
@@ -55,7 +56,7 @@ const StudentDashboard = () => {
   return (
     <DashboardLayout
       role="student"
-      title={`Welcome back, ${currentUser.name.split(" ")[0]}`}
+      title={`Welcome back, ${user && user.name ? user.name.split(" ")[0] : "Student"}`}
       subtitle="Here's your placement readiness overview."
     >
       {/* ── Top row: Ring + Stats ── */}
@@ -66,13 +67,13 @@ const StudentDashboard = () => {
           transition={{ duration: 0.4 }}
           className="glass-card rounded-xl p-6 flex flex-col items-center justify-center gap-3"
         >
-          <ReadinessRing value={data?.readiness ?? 76} />
+          <ReadinessRing value={data?.readiness ?? 0} />
           <div className="text-center">
             <Badge className="bg-success/10 text-success border-success/20 text-xs font-medium">
-              Top 18% in batch
+              Real-time Readiness
             </Badge>
             <p className="text-xs text-muted-foreground mt-2 max-w-[180px]">
-              12 pts above batch average
+              Based on your recent assessment performance.
             </p>
           </div>
         </motion.div>
@@ -81,35 +82,35 @@ const StudentDashboard = () => {
           <StatCard
             icon={BookOpen}
             label="Tests taken"
-            value="24"
-            change="+3 this week"
-            changeType="positive"
+            value={results.length.toString()}
+            change="Keep it up!"
+            changeType="neutral"
             delay={0.05}
             accent="primary"
           />
           <StatCard
             icon={Trophy}
             label="Avg score"
-            value="76%"
-            change="+5% this month"
+            value={`${results.length > 0 ? Math.round(results.reduce((acc, curr) => acc + curr.score, 0) / results.length) : 0}%`}
+            change="Overall accuracy"
             changeType="positive"
             delay={0.1}
             accent="success"
           />
           <StatCard
             icon={TrendingUp}
-            label="Class rank"
-            value="#47"
-            change="↑ 8 positions"
-            changeType="positive"
+            label="Tests upcoming"
+            value={upcoming.length.toString()}
+            change="Ready for next?"
+            changeType="neutral"
             delay={0.15}
             accent="info"
           />
           <StatCard
             icon={Sparkles}
-            label="Study streak"
-            value="12 days"
-            change="Keep it up!"
+            label="Prep Score"
+            value={(data?.readiness ?? 0).toString()}
+            change="Data-backed"
             changeType="neutral"
             delay={0.2}
             accent="warning"

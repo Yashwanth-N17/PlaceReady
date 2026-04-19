@@ -17,6 +17,7 @@ import {
   EyeOff
 } from "lucide-react";
 import { getQuestions, Question } from "@/api/question.api";
+import { StudentAPI } from "@/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -26,9 +27,18 @@ const StudentTraining = () => {
   const [search, setSearch] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
+  const [weakTopics, setWeakTopics] = useState<string[]>([]);
+  const [showPersonalized, setShowPersonalized] = useState(false);
 
   useEffect(() => {
     fetchQuestions();
+    // Derive weak topics from real results (attempts where score < 60%)
+    StudentAPI.results().then((results: any[]) => {
+      const lowScoreTopics = results
+        .filter(r => r.score < 60)
+        .flatMap(r => [r.subject].filter(Boolean));
+      setWeakTopics([...new Set(lowScoreTopics)]);
+    });
   }, []);
 
   const fetchQuestions = async () => {
@@ -56,7 +66,9 @@ const StudentTraining = () => {
     const matchesSearch = q.text.toLowerCase().includes(search.toLowerCase()) || 
                          q.subject?.toLowerCase().includes(search.toLowerCase());
     const matchesTag = !selectedTag || q.tags.some((t: any) => t.name === selectedTag);
-    return matchesSearch && matchesTag;
+    const matchesWeak = !showPersonalized || weakTopics.length === 0 ||
+      weakTopics.some(w => q.subject?.toLowerCase().includes(w.toLowerCase()) || q.topic?.toLowerCase().includes(w.toLowerCase()));
+    return matchesSearch && matchesTag && matchesWeak;
   });
 
   return (
@@ -67,6 +79,32 @@ const StudentTraining = () => {
     >
       <div className="grid lg:grid-cols-[1fr_300px] gap-8">
         <div className="space-y-6">
+          {/* Personalized Banner */}
+          {weakTopics.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card rounded-xl p-4 border border-warning/20 bg-warning/5 flex items-start justify-between gap-3"
+            >
+              <div>
+                <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-warning" /> Personalized for you
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Based on your low scores in: <span className="text-foreground font-medium">{weakTopics.join(", ")}</span>
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={showPersonalized ? "default" : "outline"}
+                onClick={() => setShowPersonalized(p => !p)}
+                className={cn("h-8 text-xs shrink-0", showPersonalized && "bg-warning text-warning-foreground border-warning hover:bg-warning/90")}
+              >
+                {showPersonalized ? "For You ✓" : "Show For You"}
+              </Button>
+            </motion.div>
+          )}
+
           {/* Search & Filters */}
           <div className="glass-card p-4 rounded-xl flex items-center gap-4">
             <div className="relative flex-1">

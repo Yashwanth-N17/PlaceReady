@@ -102,6 +102,7 @@ export const createAssessment = async (req, res) => {
   }
 };
 
+
 export const getAssessments = async (req, res) => {
   try {
     const where = {};
@@ -130,6 +131,47 @@ export const getAssessments = async (req, res) => {
     });
   } catch (error) {
     console.error("Fetch Assessments Error:", error);
-    return res.status(500).json({ message: "Failed to fetch assessments", error: error.message });
   }
 };
+
+export const getAssessmentById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const assessment = await prisma.assessment.findUnique({
+      where: { id },
+      include: {
+        questions: {
+          include: { tags: true }
+        },
+        createdBy: {
+          select: { name: true, email: true }
+        }
+      }
+    });
+
+    if (!assessment) {
+      return res.status(404).json({ message: "Assessment not found" });
+    }
+
+    if (req.user.role === "STUDENT") {
+      const isAssigned = await prisma.assessment.findFirst({
+        where: {
+          id,
+          students: { some: { id: req.user.id } }
+        }
+      });
+      if (!isAssigned) {
+        return res.status(403).json({ message: "You are not assigned to this assessment" });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: assessment
+    });
+  } catch (error) {
+    console.error("Fetch Assessment Detail Error:", error);
+    return res.status(500).json({ message: "Failed to fetch assessment details", error: error.message });
+  }
+}
