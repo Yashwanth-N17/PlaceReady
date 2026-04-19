@@ -24,11 +24,9 @@ async def root():
         "version": "1.0.0"
     }
 
-@app.post("/extract-tags")
-async def extract_tags(file: UploadFile = File(...)):
+@app.post("/extract-questions")
+async def extract_questions(file: UploadFile = File(...)):
     filename = file.filename.lower()
-    
-    # Identify file type
     if filename.endswith('.pdf'):
         parser = parse_pdf
     elif filename.endswith(('.xlsx', '.xls', '.csv')):
@@ -37,26 +35,28 @@ async def extract_tags(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Only PDF, Excel, and CSV files are supported")
     
     try:
-        # Read file into memory
         contents = await file.read()
-        
-        # Parse content based on file type
         text = parser(io.BytesIO(contents))
-        
         if not text.strip():
             raise HTTPException(status_code=400, detail="Could not extract data from the provided file")
 
-        # Call Gemini via the extractor service
         extraction_result = await extractor_service.extract_tags_from_text(text)
         
         return {
             "success": True,
-            "data": extraction_result
+            "subject": extraction_result.subject,
+            "topic": extraction_result.topic,
+            "questions": extraction_result.questions
         }
     
     except Exception as e:
         print(f"Error in extraction process: {e}")
         raise HTTPException(status_code=500, detail=f"AI Extraction Failed: {str(e)}")
+
+@app.post("/extract-tags")
+async def extract_tags(file: UploadFile = File(...)):
+    # Legacy support
+    return await extract_questions(file)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

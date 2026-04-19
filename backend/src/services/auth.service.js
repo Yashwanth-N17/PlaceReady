@@ -36,9 +36,7 @@ export async function logoutUser(token) {
       where: { id: decoded.id },
       data: { refreshToken: null },
     });
-  } catch (error) {
-    // Ignore invalid tokens
-  }
+  } catch (error) {}
 }
 
 export async function refreshUserToken(oldToken) {

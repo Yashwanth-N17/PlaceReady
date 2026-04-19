@@ -15,9 +15,9 @@ import {
   CalendarDays, Clock, Users as UsersIcon, Send, 
   Upload as UploadIcon, FileText, BrainCircuit, 
   Sparkles, CheckCircle2, ChevronRight, ChevronLeft,
-  Search, BookOpen, Tag as TagIcon
+  Search, BookOpen, Tag as TagIcon, X, Trash2, Plus
 } from "lucide-react";
-import { FacultyAPI } from "@/api";
+import { FacultyAPI, QuestionAPI, AssessmentAPI } from "@/api";
 import type { FacultyMember, StudentRecord } from "@/data/mock";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -29,14 +29,6 @@ const DEPARTMENTS = [
   "MECH",
   "CIVIL",
   "Open to All"
-];
-
-const MOCK_EXTRACTED_QUESTIONS = [
-  { id: 1, text: "Explain the difference between SQL and NoSQL databases.", tags: ["DBMS", "Software Engineering"], difficulty: "Medium" },
-  { id: 2, text: "What is the time complexity of a binary search algorithm?", tags: ["DSA", "Algorithms"], difficulty: "Easy" },
-  { id: 3, text: "Describe the four pillars of OOPs with real-world examples.", tags: ["Java", "OOPs"], difficulty: "Medium" },
-  { id: 4, text: "How does the TCP three-way handshake process work?", tags: ["Networking", "Protocols"], difficulty: "Hard" },
-  { id: 5, text: "A train 150m long passes a pole in 15 seconds. What is the speed of the train?", tags: ["Aptitude", "Time & Distance"], difficulty: "Easy" },
 ];
 
 type Step = "details" | "upload" | "ai-process" | "review-tags" | "audience";
@@ -58,7 +50,7 @@ const ScheduleTests = () => {
   
   // AI Extraction
   const [aiProgress, setAiProgress] = useState(0);
-  const [extractedQuestions, setExtractedQuestions] = useState(MOCK_EXTRACTED_QUESTIONS);
+  const [extractedQuestions, setExtractedQuestions] = useState<any[]>([]);
 
   // Scheduling
   const [date, setDate] = useState("");
@@ -81,21 +73,48 @@ const ScheduleTests = () => {
     setSelected(new Set());
   }, [dept]);
 
-  const handleFile = useCallback((f: File) => {
+  const handleFile = async (f: File) => {
+    // Optimization: Don't re-extract if it's the same file
+    if (file?.name === f.name && file?.size === f.size && extractedQuestions.length > 0) {
+      setStep("review-tags");
+      return;
+    }
+
     setFile(f);
     setStep("ai-process");
-    let p = 0;
+    setAiProgress(10);
+
     const interval = setInterval(() => {
-      p += Math.random() * 20;
-      if (p >= 100) {
-        clearInterval(interval);
+      setAiProgress(prev => (prev < 90 ? prev + Math.random() * 5 : prev));
+    }, 1000);
+
+    try {
+      const response = await QuestionAPI.extract(f);
+      clearInterval(interval);
+      
+      const responseData = (response as any).data;
+      if (response.success || responseData?.success) {
         setAiProgress(100);
+        const questionsArray = Array.isArray(responseData) ? responseData : responseData?.data || [];
+        setExtractedQuestions(questionsArray);
         setTimeout(() => setStep("review-tags"), 800);
-      } else {
-        setAiProgress(p);
       }
-    }, 400);
-  }, []);
+    } catch (error: any) {
+      clearInterval(interval);
+      toast.error("AI Extraction Failed", { description: error.message });
+      setStep("upload");
+    }
+  };
+
+  const handleUpdateQuestion = (index: number, field: string, value: any) => {
+    const updated = [...extractedQuestions];
+    updated[index] = { ...updated[index], [field]: value };
+    setExtractedQuestions(updated);
+  };
+
+  const handleDeleteQuestion = (index: number) => {
+    setExtractedQuestions(extractedQuestions.filter((_, i) => i !== index));
+  };
 
   const filteredStudents = students.filter(s => {
     if (dept === "Open to All") return true;
@@ -120,25 +139,37 @@ const ScheduleTests = () => {
       toast.error("Please fill in all scheduling details"); 
       return; 
     }
+    
     const targetIds = scope === "all" ? filteredStudents.map((s) => s.id) : 
                        scope === "mentees" ? (me?.menteeIds ?? []) : [...selected];
+
+    const toastId = toast.loading("Finalizing test schedule...");
     
-    await FacultyAPI.scheduleTest({
-      title,
-      subject: `${dept} - ${subject}`,
-      type: category,
-      date: `${date}T${time}:00`,
-      durationMin: duration,
-      questionsCount: extractedQuestions.length,
-      status: "upcoming",
-    });
-    
-    toast.success("Test Scheduled Successfully!", {
-      description: `Test published for ${targetIds.length} students in ${dept}.`
-    });
-    setStep("details");
-    setTitle("");
-    setFile(null);
+    try {
+      await AssessmentAPI.create({
+        title,
+        description: instructions,
+        type: category,
+        subject: `${dept} - ${subject}`,
+        scheduledAt: `${date}T${time}:00`,
+        duration,
+        questions: extractedQuestions,
+        studentIds: targetIds
+      });
+
+      toast.success("Test Scheduled Successfully!", {
+        id: toastId,
+        description: `Test published for ${targetIds.length} students.`
+      });
+      
+      setStep("details");
+      setTitle("");
+      setFile(null);
+      setExtractedQuestions([]);
+      setSelected(new Set());
+    } catch (error: any) {
+      toast.error("Scheduling failed", { id: toastId, description: error.message });
+    }
   };
 
   return (
@@ -286,8 +317,8 @@ const ScheduleTests = () => {
                 <div className="h-16 w-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                   <FileText className="h-8 w-8 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold">Upload Documentation</h3>
-                <p className="text-sm text-muted-foreground mt-1">AI will analyze questions for {dept}</p>
+                <h3 className="text-xl font-semibold">Upload Question Paper</h3>
+                <p className="text-sm text-muted-foreground mt-1">Our AI will automatically extract and categorize questions.</p>
               </div>
               <label
                 onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
@@ -301,7 +332,7 @@ const ScheduleTests = () => {
                 <input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
                 <UploadIcon className="h-8 w-8 mx-auto text-muted-foreground mb-4" />
                 <p className="font-medium">Click to upload or drag paper</p>
-                <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, JSON supported</p>
+                <p className="text-xs text-muted-foreground mt-1">PDF, Excel, and CSV supported</p>
               </label>
               <Button variant="ghost" onClick={() => setStep("details")} className="mt-8 text-muted-foreground"><ChevronLeft className="mr-2 h-4 w-4" /> Back to Config</Button>
             </div>
@@ -312,39 +343,102 @@ const ScheduleTests = () => {
         {step === "ai-process" && (
           <motion.div key="ai-process" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card rounded-2xl p-16 text-center max-w-2xl mx-auto">
             <BrainCircuit className="h-12 w-12 text-primary mx-auto mb-6 animate-pulse" />
-            <h3 className="text-2xl font-display font-bold mb-2">Engaging AI Analyzer...</h3>
-            <p className="text-sm text-muted-foreground mb-8">Mapping questions to core departmental competencies.</p>
+            <h3 className="text-2xl font-display font-bold mb-2">Analyzing Document...</h3>
+            <p className="text-sm text-muted-foreground mb-8">Extracting questions and mapping them to competencies.</p>
             <Progress value={aiProgress} className="h-2 max-w-xs mx-auto" />
           </motion.div>
         )}
 
-        {/* STEP 4: REVIEW TAGS */}
+        {/* STEP 4: REVIEW TAGS & EDIT QUESTIONS */}
         {step === "review-tags" && (
           <motion.div key="review-tags" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold">Review Extracted Tags</h3>
-              <Badge variant="outline" className="border-primary/30 text-primary"><Sparkles className="h-3 w-3 mr-1" /> AI Assisted</Badge>
+            <div className="flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-md py-4 z-10 border-b border-border">
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-bold">Review Extracted Data</h3>
+                <Badge variant="outline" className="border-primary/30 text-primary"><Sparkles className="h-3 w-3 mr-1" /> AI Assisted</Badge>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setStep("upload")}>Re-upload</Button>
+                <Button onClick={() => setStep("audience")} className="bg-gradient-primary text-primary-foreground shadow-outer">
+                  Looks Good <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-4">
-              {extractedQuestions.map((q) => (
-                <div key={q.id} className="glass-card rounded-xl p-5 flex gap-6 hover:bg-secondary/10 transition-colors">
-                  <div className="flex-1 text-sm font-medium leading-relaxed">{q.text}</div>
-                  <div className="w-64 shrink-0 space-y-2 border-l border-border/50 pl-6">
-                    <div className="flex flex-wrap gap-1">
-                      {q.tags.map(t => <Badge key={t} variant="secondary" className="text-[9px] px-1.5 py-0">#{t}</Badge>)}
+
+            <div className="grid grid-cols-1 gap-6 pb-8">
+              {extractedQuestions.map((q, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="glass-card rounded-xl p-6 relative group border border-border/50 hover:border-primary/30 transition-all"
+                >
+                  <button 
+                    onClick={() => handleDeleteQuestion(idx)}
+                    className="absolute top-4 right-4 p-2 rounded-lg bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-white"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+
+                  <div className="grid md:grid-cols-1 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Question</Label>
+                        <Textarea 
+                          value={q.text} 
+                          onChange={(e) => handleUpdateQuestion(idx, "text", e.target.value)}
+                          className="bg-secondary/30 min-h-[80px]"
+                        />
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Answer</Label>
+                          <Input 
+                            value={q.answer} 
+                            onChange={(e) => handleUpdateQuestion(idx, "answer", e.target.value)}
+                            className="bg-secondary/30"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Difficulty</Label>
+                          <Select 
+                            value={q.difficulty?.toUpperCase() || "MEDIUM"} 
+                            onValueChange={(v) => handleUpdateQuestion(idx, "difficulty", v)}
+                          >
+                            <SelectTrigger className="bg-secondary/30 h-10 uppercase"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {["EASY", "MEDIUM", "HARD"].map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Tags</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {q.tags?.map((t: string) => (
+                            <Badge key={t} variant="secondary" className="px-2 py-0 text-[10px]">
+                              {t} <X className="h-2 w-2 ml-1 cursor-pointer" onClick={() => {
+                                handleUpdateQuestion(idx, "tags", q.tags.filter((tag: string) => tag !== t));
+                              }} />
+                            </Badge>
+                          ))}
+                          <button 
+                            className="h-5 w-5 rounded-full border border-dashed border-muted-foreground flex items-center justify-center hover:bg-secondary"
+                            onClick={() => {
+                              const tag = prompt("Enter tag:");
+                              if (tag) {
+                                handleUpdateQuestion(idx, "tags", [...(q.tags || []), tag]);
+                              }
+                            }}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className={cn(
-                      "text-[10px] font-bold uppercase tracking-wider",
-                      q.difficulty === "Easy" ? "text-success" : q.difficulty === "Medium" ? "text-warning" : "text-destructive"
-                    )}>Difficulty: {q.difficulty}</div>
                   </div>
-                </div>
+                </motion.div>
               ))}
-            </div>
-            <div className="flex justify-end p-4 bg-secondary/20 rounded-xl border border-border/50">
-              <Button onClick={() => setStep("audience")} className="bg-gradient-primary text-primary-foreground shadow-outer">
-                Proceed to Scheduling <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
             </div>
           </motion.div>
         )}
@@ -374,7 +468,7 @@ const ScheduleTests = () => {
               </div>
               <div className="pt-6 border-t border-border/50">
                 <div className="flex items-center justify-between mb-4 bg-secondary/20 rounded-lg p-3">
-                  <div className="text-[11px] text-muted-foreground uppercase font-bold">Summary: {visible.length} Students · {dept}</div>
+                  <div className="text-[11px] text-muted-foreground uppercase font-bold">Summary: {visible.length} Students · {extractedQuestions.length} Questions</div>
                   <Badge className="bg-primary/20 text-primary border-0">{category}</Badge>
                 </div>
                 <Button onClick={submit} className="w-full h-12 bg-gradient-primary text-primary-foreground shadow-glow font-bold text-base">

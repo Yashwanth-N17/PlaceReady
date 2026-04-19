@@ -20,7 +20,6 @@ export const extractTestMetadata = async (req, res) => {
       headers: { ...formData.getHeaders() }
     });
 
-    // Cleanup
     fs.unlink(req.file.path, () => {});
 
     return res.status(200).json({
