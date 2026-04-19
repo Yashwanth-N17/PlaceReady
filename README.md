@@ -69,9 +69,9 @@ Open three terminal windows and run:
 ## 🔐 Credentials for Testing
 | Role | Email | Password |
 | :--- | :--- | :--- |
-| **Student** | student@placeready.com | password123 |
-| **Faculty** | faculty@placeready.com | password123 |
-| **Placement** | placement@placeready.com | password123 |
+| **Student** | [EMAIL_ADDRESS] | password123 |
+| **Faculty** | [EMAIL_ADDRESS] | password123 |
+| **Placement** | [EMAIL_ADDRESS] | password123 |
 
 ---
 

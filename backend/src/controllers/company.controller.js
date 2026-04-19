@@ -1,21 +1,20 @@
-import { prisma } from "../config/db.js";
+import { PlacementService } from "../services/placement.service.js";
+import { success, error } from "../utils/response.js";
 
 export const getCompanies = async (req, res) => {
   try {
-    const companies = await prisma.company.findMany({
-      include: { drives: true }
-    });
-    res.status(200).json({ success: true, data: companies });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const data = await PlacementService.getCompanies();
+    return success(res, data);
+  } catch (err) {
+    return error(res, "Failed to load companies", 500, err);
   }
 };
 
 export const createCompany = async (req, res) => {
   try {
-    const company = await prisma.company.create({ data: req.body });
-    res.status(201).json({ success: true, data: company });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const data = await PlacementService.createCompany(req.body);
+    return success(res, data, "Company added successfully", 201);
+  } catch (err) {
+    return error(res, "Failed to add company", 500, err);
   }
 };

@@ -11,7 +11,6 @@ router.get("/attempts", authenticate, authorize("STUDENT"), getStudentAttempts);
 router.get("/:id", authenticate, getAssessmentById);
 router.post("/:assessmentId/submit", authenticate, authorize("STUDENT"), submitAttempt);
 
-// Faculty manual review: all attempts for a specific assessment
 router.get("/:assessmentId/attempts/all", authenticate, authorize("FACULTY"), getAssessmentAttempts);
 
 export default router;
