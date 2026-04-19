@@ -157,7 +157,10 @@
   }
 
   .hero-bg { background: var(--gradient-hero); }
-
+  /* Alias for pulse-glow keyframes (also available as Tailwind animate-pulse-glow) */
+  .shadow-glow-pulse {
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
   .grid-pattern {
     background-image:
       linear-gradient(hsl(var(--border) / 0.5) 1px, transparent 1px),

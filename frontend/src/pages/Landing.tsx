@@ -1,10 +1,11 @@
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import { useCountUp } from "../hooks/useCountUp";
+import { motion, useInView, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles,
   ArrowRight,
-  Database,
   Eye,
   Zap,
   LineChart,
@@ -24,17 +25,36 @@ import {
   BarChart3,
 } from "lucide-react";
 
+/* ─── Shared animation variants ─────────────────────────────── */
+
 const fadeUp = {
+  initial: { opacity: 0, y: 40 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-80px" },
+  transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] as const },
+};
+
+const staggerContainer = {
+  initial: {},
+  animate: { transition: { staggerChildren: 0.08 } },
   initial: { opacity: 0, y: 20 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, margin: "-60px" },
   transition: { duration: 0.55, ease: [0.4, 0, 0.2, 1] as const },
 };
 
+const staggerItem = {
+  initial: { opacity: 0, y: 28 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } },
+};
+
+/* ─── Data ───────────────────────────────────────────────────── */
+
 const roles = [
   {
     id: "student",
     title: "Student",
+    desc: "Track your readiness score, weak areas, and personalised training paths.",
     desc: "Track readiness score, weak areas, and personalized training paths.",
     icon: GraduationCap,
     href: "/student/login",
@@ -46,6 +66,7 @@ const roles = [
   {
     id: "faculty",
     title: "Faculty",
+    desc: "Monitor batch performance, identify gaps, and upload student data effortlessly.",
     desc: "Monitor batch performance, identify gaps, and upload student data.",
     icon: Users,
     href: "/faculty/login",
@@ -57,6 +78,10 @@ const roles = [
   {
     id: "placement",
     title: "Placement Officer",
+    desc: "Match students to companies, generate shortlists, and track placement trends.",
+    icon: Briefcase,
+    href: "/placement/login",
+    accent: "from-primary/20 to-primary/5",
     desc: "Match students to companies, generate shortlists, track placement trends.",
     icon: Briefcase,
     href: "/placement/login",
@@ -67,9 +92,288 @@ const roles = [
   },
 ];
 
+const NAV_LINKS = [
+  { label: "For Roles", href: "#roles" },
+  { label: "Problem", href: "#problem" },
+  { label: "Features", href: "#features" },
+  { label: "Impact", href: "#impact" },
+] as const;
+
+/* ─── AnimatedStat — only counts when visible ────────────────── */
+
+function AnimatedStat({ value, suffix }: { value: number; suffix: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
+  const count = useCountUp(isInView ? value : 0, suffix, 1800);
+
+  return (
+    <p
+      ref={ref}
+      className="text-6xl font-display font-bold tracking-tight text-primary"
+    >
+      {count}
+    </p>
+  );
+}
+
+/* ─── Ambient background blobs ───────────────────────────────── */
+
+function AmbientBlobs() {
+  return (
+    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      <motion.div
+        className="absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full"
+        style={{
+          background: "radial-gradient(circle, hsl(200 95% 55% / 0.07) 0%, transparent 70%)",
+        }}
+        animate={{
+          x: [0, 40, -20, 0],
+          y: [0, -50, 30, 0],
+          scale: [1, 1.1, 0.95, 1],
+        }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full"
+        style={{
+          background: "radial-gradient(circle, hsl(190 90% 60% / 0.05) 0%, transparent 70%)",
+        }}
+        animate={{
+          x: [0, -30, 20, 0],
+          y: [0, 40, -30, 0],
+          scale: [1, 0.95, 1.05, 1],
+        }}
+        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+      />
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[800px] w-[800px] rounded-full"
+        style={{
+          background: "radial-gradient(circle, hsl(200 95% 55% / 0.03) 0%, transparent 60%)",
+        }}
+        animate={{ scale: [1, 1.08, 1], opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  );
+}
+
+/* ─── Scrolling navbar ───────────────────────────────────────── */
+
+function Navbar() {
+  const { scrollY } = useScroll();
+  const backgroundColor = useTransform(
+    scrollY,
+    [0, 80],
+    ["hsl(220 30% 6% / 0.4)", "hsl(220 30% 6% / 0.85)"]
+  );
+  const borderColor = useTransform(
+    scrollY,
+    [0, 80],
+    ["hsl(220 20% 18% / 0.2)", "hsl(220 20% 18% / 0.5)"]
+  );
+  const boxShadow = useTransform(
+    scrollY,
+    [0, 80],
+    ["0 0 0px rgba(0,0,0,0)", "0 4px 24px rgba(0,0,0,0.3)"]
+  );
+
+  return (
+    <motion.nav
+      className="sticky top-0 z-50 backdrop-blur-xl border-b border-border/50"
+      style={{
+        backgroundColor,
+        borderColor,
+        boxShadow,
+      }}
+    >
+      <div className="container flex h-16 items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 group">
+          <motion.div
+            className="rounded-md bg-primary p-1.5"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            transition={{ type: "spring", stiffness: 400 }}
+          >
+            <GraduationCap className="h-4 w-4 text-primary-foreground" />
+          </motion.div>
+          <span className="font-display font-bold tracking-tight">PlaceReady</span>
+        </Link>
+
+        <div className="hidden md:flex items-center gap-8 text-base text-muted-foreground">
+          {NAV_LINKS.map(({ label, href }) => (
+            <a
+              key={href}
+              href={href}
+              className="relative hover:text-foreground transition-colors duration-200 group"
+            >
+              {label}
+              <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-primary transition-all duration-300 group-hover:w-full" />
+            </a>
+          ))}
+        </div>
+
+        <Link to="/login">
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-medium px-5"
+            >
+              Sign in
+            </Button>
+          </motion.div>
+        </Link>
+      </div>
+    </motion.nav>
+  );
+}
+
+/* ─── Main component ─────────────────────────────────────────── */
+
 const Landing = () => {
+  const heroRef = useRef<HTMLElement | null>(null);
+  const reduceMotion = useReducedMotion();
+  const parallax = reduceMotion ? 0 : 1;
+
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+
+  const gridParallaxY = useTransform(scrollYProgress, [0, 1], [0, 40 * parallax]);
+  const badgeParallaxY = useTransform(scrollYProgress, [0, 1], [0, 6 * parallax]);
+  const titleParallaxY = useTransform(scrollYProgress, [0, 1], [0, 12 * parallax]);
+  const subParallaxY = useTransform(scrollYProgress, [0, 1], [0, 18 * parallax]);
+  const ctaParallaxY = useTransform(scrollYProgress, [0, 1], [0, 24 * parallax]);
+  const chipsParallaxY = useTransform(scrollYProgress, [0, 1], [0, 30 * parallax]);
+
   return (
     <div className="min-h-screen hero-bg text-foreground">
+      <AmbientBlobs />
+      <Navbar />
+
+      <section ref={heroRef} className="relative overflow-hidden pt-20 pb-28">
+        <motion.div
+          className="absolute inset-0 grid-pattern opacity-25"
+          style={{ y: gridParallaxY }}
+          aria-hidden
+        />
+
+        <div className="container relative">
+          <div className="mx-auto max-w-4xl text-center">
+            <motion.div style={{ y: badgeParallaxY }} className="will-change-transform">
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-3 py-1 text-sm text-muted-foreground mb-6"
+              >
+                <motion.span
+                  animate={{ rotate: [0, 15, -5, 0] }}
+                  transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3 }}
+                >
+                  <Sparkles className="h-3 w-3 text-primary" />
+                </motion.span>
+                AI-powered placement intelligence
+              </motion.div>
+            </motion.div>
+
+            <motion.div style={{ y: titleParallaxY }} className="will-change-transform">
+              <motion.h1
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.75, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+                className="text-5xl md:text-7xl font-display font-bold tracking-tighter leading-[1.05]"
+              >
+                Placement Readiness,{" "}
+                <br className="hidden md:block" />
+                <span className="relative inline-block">
+                  <span className="text-gradient">Zero Manual Effort</span>
+                  <motion.span
+                    className="absolute -bottom-1 left-0 h-[2px] w-full origin-left rounded-full bg-gradient-to-r from-primary to-primary/40"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ duration: 0.8, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </span>
+              </motion.h1>
+            </motion.div>
+
+            <motion.div style={{ y: subParallaxY }} className="will-change-transform">
+              <motion.p
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.65, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="mt-6 text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+              >
+                One unified platform for student performance, training, and placement
+                coordination — built to replace scattered Excel sheets, forms, and notebooks.
+              </motion.p>
+            </motion.div>
+
+            <motion.div style={{ y: ctaParallaxY }} className="will-change-transform">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.45, ease: "easeOut" }}
+                className="mt-10 flex flex-col sm:flex-row gap-3 justify-center"
+              >
+                <a href="#roles">
+                  <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+                    <Button
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 group shadow-glow animate-pulse-glow"
+                      size="lg"
+                    >
+                      Choose your role
+                      <motion.span
+                        className="ml-2 inline-flex"
+                        animate={{ x: [0, 3, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        <ArrowRight className="h-4 w-4" />
+                      </motion.span>
+                    </Button>
+                  </motion.div>
+                </a>
+              </motion.div>
+            </motion.div>
+
+            <motion.div style={{ y: chipsParallaxY }} className="will-change-transform">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
+                className="mt-12 flex flex-wrap justify-center gap-x-8 gap-y-3 text-base text-muted-foreground"
+              >
+                {["Bulk Excel import", "Role-based access", "Real-time analytics", "AI insights"].map(
+                  (t, i) => (
+                    <motion.div
+                      key={t}
+                      className="flex items-center gap-2"
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.65 + i * 0.08, duration: 0.4 }}
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                      <span>{t}</span>
+                    </motion.div>
+                  )
+                )}
+              </motion.div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      <section id="roles" className="py-20 border-t border-border/50">
+        <div className="container">
+          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-12">
+            <p className="text-base font-medium uppercase tracking-widest text-primary mb-3">
+              Get started
+            </p>
+            <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
+              Pick your portal
+            </h2>
+            <p className="mt-3 text-lg text-muted-foreground leading-relaxed">
 
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 h-14 backdrop-blur-xl bg-background/75 border-b border-border/50">
@@ -169,6 +473,44 @@ const Landing = () => {
             </p>
           </motion.div>
 
+          <motion.div
+            className="grid md:grid-cols-3 gap-6"
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            {roles.map((r) => (
+              <motion.div key={r.id} variants={staggerItem}>
+                <motion.div
+                  whileHover={{ y: -10, scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  style={{ willChange: "transform" }}
+                >
+                  <Link to={r.href} className="block h-full">
+                    <div
+                      className={`glass-card rounded-2xl p-8 h-full hover:shadow-glow transition-shadow duration-500 group relative overflow-hidden`}
+                    >
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-br ${r.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
+                      />
+                      <div className="relative">
+                        <motion.div
+                          className="rounded-xl bg-primary/10 text-primary p-3 w-fit group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300"
+                          whileHover={{ rotate: 8 }}
+                          transition={{ type: "spring", stiffness: 300 }}
+                        >
+                          <r.icon className="h-6 w-6" />
+                        </motion.div>
+                        <h3 className="mt-5 text-2xl font-display font-semibold">{r.title}</h3>
+                        <p className="mt-2 text-base text-muted-foreground leading-relaxed">
+                          {r.desc}
+                        </p>
+                        <div className="mt-5 flex items-center gap-1 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 translate-x-0 group-hover:translate-x-1 transition-all duration-300">
+                          Go to portal <ArrowRight className="h-3.5 w-3.5" />
+                        </div>
+                      </div>
           <div className="grid md:grid-cols-3 gap-5 max-w-4xl mx-auto">
             {roles.map((r, i) => (
               <motion.div
@@ -199,14 +541,69 @@ const Landing = () => {
                       Enter portal
                       <ArrowUpRight className="ml-1 h-3.5 w-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </motion.div>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
+      <section id="problem" className="py-24 border-t border-border/50">
+        <div className="container">
+          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-12">
+            <p className="text-base font-medium uppercase tracking-widest text-primary mb-3">
+              The Problem
+            </p>
+            <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
+              Placement is still{" "}
+              <span className="text-gradient">running on chaos</span>
+            </h2>
+            <p className="mt-3 text-lg text-muted-foreground leading-relaxed">
+              Every campus manages placement through a patchwork of spreadsheets, WhatsApp threads, and gut feelings.
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="grid md:grid-cols-3 gap-6"
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            {[
+              {
+                icon: Eye,
+                title: "No visibility",
+                desc: "Faculty can't see which students are at risk until it's too late for intervention.",
+              },
+              {
+                icon: Zap,
+                title: "Manual bottlenecks",
+                desc: "Shortlisting is done by hand — slow, error-prone, and impossible to audit.",
+              },
+              {
+                icon: Rocket,
+                title: "Zero personalisation",
+                desc: "One-size-fits-all training ignores individual skill gaps and learning curves.",
+              },
+            ].map((p) => (
+              <motion.div key={p.title} variants={staggerItem}>
+                <motion.div
+                  whileHover={{ y: -8 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="glass-card rounded-xl p-6 hover:shadow-elevated transition-shadow duration-300 h-full"
+                >
+                  <motion.div
+                    className="rounded-lg bg-destructive/10 text-destructive p-2.5 w-fit"
+                    whileHover={{ rotate: -6 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <p.icon className="h-5 w-5" />
+                  </motion.div>
+                  <h3 className="mt-4 text-xl font-display font-semibold">{p.title}</h3>
+                  <p className="mt-2 text-base text-muted-foreground leading-relaxed">{p.desc}</p>
+                </motion.div>
       {/* ── PROBLEM ── */}
       <section id="problem" className="py-20 border-t border-border/40">
         <div className="container">
@@ -257,10 +654,58 @@ const Landing = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
+      <section id="impact" className="py-24 border-t border-border/50">
+        <div className="container">
+          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
+            <p className="text-base font-medium uppercase tracking-widest text-primary mb-3">
+              Impact
+            </p>
+            <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
+              Numbers that move the needle
+            </h2>
+          </motion.div>
+
+          <motion.div
+            className="grid md:grid-cols-3 gap-6"
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            {[
+              {
+                value: 90,
+                suffix: "%",
+                label: "Less admin work",
+                desc: "Excel mapping + auto-import eliminates repetitive data entry.",
+              },
+              {
+                value: 32,
+                suffix: "x",
+                label: "Faster shortlisting",
+                desc: "One-click filtering against company eligibility profiles.",
+              },
+              {
+                value: 47,
+                suffix: "%",
+                label: "Higher conversion",
+                desc: "Skill-based remediation outperforms generic CGPA cutoffs.",
+              },
+            ].map((m) => (
+              <motion.div key={m.label} variants={staggerItem}>
+                <motion.div
+                  whileHover={{ y: -6, scale: 1.01 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="glass-card rounded-xl p-8 h-full hover:shadow-glow transition-shadow duration-500"
+                >
+                  <AnimatedStat value={m.value} suffix={m.suffix} />
+                  <h3 className="mt-3 font-display font-semibold text-xl">{m.label}</h3>
+                  <p className="mt-2 text-base text-muted-foreground leading-relaxed">{m.desc}</p>
+                </motion.div>
       {/* ── IMPACT ── */}
       <section id="impact" className="py-20 border-t border-border/40">
         <div className="container">
@@ -288,10 +733,17 @@ const Landing = () => {
                 <p className="text-sm text-muted-foreground">{m.desc}</p>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
+      <section id="features" className="py-24 border-t border-border/50">
+        <div className="container">
+          <motion.div {...fadeUp} className="max-w-2xl mx-auto text-center mb-16">
+            <p className="text-base font-medium uppercase tracking-widest text-primary mb-3">
+              Features
+            </p>
+            <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
       {/* ── FEATURES ── */}
       <section id="features" className="py-20 border-t border-border/40">
         <div className="container">
@@ -302,6 +754,61 @@ const Landing = () => {
             </h2>
           </motion.div>
 
+          <motion.div
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+            variants={staggerContainer}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            {[
+              {
+                icon: LayoutDashboard,
+                title: "Unified Dashboard",
+                desc: "Single source of truth for student, faculty, and placement teams.",
+              },
+              {
+                icon: Brain,
+                title: "AI-Powered Insights",
+                desc: "Predict placement readiness and surface weak areas automatically.",
+              },
+              {
+                icon: LineChart,
+                title: "Mock Test Tracking",
+                desc: "Track every assessment across aptitude, coding, and soft skills.",
+              },
+              {
+                icon: Target,
+                title: "Personalised Training",
+                desc: "Adaptive modules tailored to each student's gaps.",
+              },
+              {
+                icon: Users,
+                title: "Batch Analytics",
+                desc: "Faculty see aggregate trends and at-risk cohorts at a glance.",
+              },
+              {
+                icon: Trophy,
+                title: "One-Click Shortlist",
+                desc: "Match students to companies via dynamic eligibility profiles.",
+              },
+            ].map((f) => (
+              <motion.div key={f.title} variants={staggerItem}>
+                <motion.div
+                  whileHover={{ y: -6 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="glass-card rounded-xl p-6 h-full group hover:shadow-elevated transition-shadow duration-300"
+                >
+                  <motion.div
+                    className="rounded-lg bg-primary/10 text-primary p-2.5 w-fit group-hover:bg-primary/20 transition-colors duration-300"
+                    whileHover={{ rotate: 8 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <f.icon className="h-5 w-5" />
+                  </motion.div>
+                  <h3 className="mt-4 font-display font-semibold">{f.title}</h3>
+                  <p className="mt-2 text-base text-muted-foreground leading-relaxed">{f.desc}</p>
+                </motion.div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {[
               { icon: LayoutDashboard, title: "Unified Dashboard", desc: "Single source of truth for students, faculty, and placement teams." },
@@ -326,10 +833,44 @@ const Landing = () => {
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
+      <section className="py-24 border-t border-border/50">
+        <div className="container">
+          <motion.div
+            {...fadeUp}
+            className="glass-card rounded-3xl p-12 md:p-16 text-center relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+            <motion.div
+              className="absolute -top-24 -right-24 h-64 w-64 rounded-full"
+              style={{
+                background: "radial-gradient(circle, hsl(200 95% 55% / 0.08) 0%, transparent 70%)",
+              }}
+              animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 5, repeat: Infinity }}
+            />
+
+            <div className="relative">
+              <h2 className="text-3xl md:text-5xl font-display font-bold tracking-tight max-w-2xl mx-auto">
+                Ready to{" "}
+                <span className="text-gradient">transform</span>{" "}
+                placement prep?
+              </h2>
+              <p className="mt-4 text-muted-foreground max-w-xl mx-auto text-lg leading-relaxed">
+                Join the colleges already running placement seasons on autopilot.
+              </p>
+              <a href="#roles" className="inline-block mt-8">
+                <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    size="lg"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow"
+                  >
+                    Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </motion.div>
       {/* ── CTA ── */}
       <section className="py-20 border-t border-border/40">
         <div className="container">
@@ -355,6 +896,7 @@ const Landing = () => {
         </div>
       </section>
 
+      <footer className="border-t border-border/50 py-12">
       {/* ── FOOTER ── */}
       <footer className="border-t border-border/40 py-10">
         <div className="container">
@@ -366,39 +908,76 @@ const Landing = () => {
                 </div>
                 <span className="font-display font-bold text-foreground">PlaceReady</span>
               </Link>
+              <p className="mt-3 text-base text-muted-foreground max-w-xs leading-relaxed">
               <p className="text-sm text-muted-foreground max-w-xs">
                 AI-powered placement readiness for the modern campus.
               </p>
             </div>
 
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-base">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-sm">
               <div>
                 <p className="font-semibold text-foreground mb-3">Product</p>
                 <ul className="space-y-2 text-muted-foreground">
-                  <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
-                  <li><a href="#impact" className="hover:text-foreground transition-colors">Impact</a></li>
-                  <li><Link to="/login" className="hover:text-foreground transition-colors">Sign in</Link></li>
+                  <li>
+                    <a href="#features" className="hover:text-foreground transition-colors">
+                      Features
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#impact" className="hover:text-foreground transition-colors">
+                      Impact
+                    </a>
+                  </li>
+                  <li>
+                    <Link to="/login" className="hover:text-foreground transition-colors">
+                      Sign in
+                    </Link>
+                  </li>
                 </ul>
               </div>
               <div>
                 <p className="font-semibold text-foreground mb-3">Company</p>
                 <ul className="space-y-2 text-muted-foreground">
-                  <li><a href="#" className="hover:text-foreground transition-colors">About</a></li>
-                  <li><a href="#" className="hover:text-foreground transition-colors">Contact</a></li>
-                  <li><a href="#" className="hover:text-foreground transition-colors">Privacy</a></li>
+                  <li>
+                    <a href="#" className="hover:text-foreground transition-colors">
+                      About
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" className="hover:text-foreground transition-colors">
+                      Contact
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" className="hover:text-foreground transition-colors">
+                      Privacy
+                    </a>
+                  </li>
                 </ul>
               </div>
               <div>
                 <p className="font-semibold text-foreground mb-3">Connect</p>
                 <div className="flex gap-3 text-muted-foreground">
-                  <a href="#" className="hover:text-foreground transition-colors"><Twitter className="h-4 w-4" /></a>
-                  <a href="#" className="hover:text-foreground transition-colors"><Github className="h-4 w-4" /></a>
-                  <a href="#" className="hover:text-foreground transition-colors"><Linkedin className="h-4 w-4" /></a>
+                  {[Twitter, Github, Linkedin].map((Icon, i) => (
+                    <motion.a
+                      key={i}
+                      href="#"
+                      className="hover:text-foreground transition-colors"
+                      whileHover={{ y: -2, scale: 1.15 }}
+                      transition={{ type: "spring", stiffness: 400 }}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </motion.a>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
 
+          <div className="mt-12 pt-8 border-t border-border/50 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+            <p>© 2026 PlaceReady. Built for campuses that ship.</p>
+            <p>Made with intention.</p>
           <div className="mt-10 pt-6 border-t border-border/40 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-muted-foreground">
             <p>© 2026 PlaceReady. All rights reserved.</p>
             <p>Built for campuses that care about outcomes.</p>
