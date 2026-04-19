@@ -146,5 +146,18 @@ export const NotificationsAPI = {
     withFallback(() => apiClient.post("/notifications/mark-all-read", { role }), { ok: true }),
 };
 
+// ============= QUESTIONS =============
+export const QuestionAPI = {
+  extract: (file: File) => apiClient.post("/questions/extract", { file }, { headers: { "Content-Type": "multipart/form-data" } }),
+  save: (questions: any[]) => apiClient.post("/questions/save", { questions }),
+  list: (params?: any) => apiClient.get("/questions", { params }),
+};
+
+import { createAssessment, getAssessments } from "./assessment.api.ts";
+export const AssessmentAPI = {
+  create: createAssessment,
+  list: getAssessments
+};
+
 // ============= UTIL =============
 export { faculty as facultyList };

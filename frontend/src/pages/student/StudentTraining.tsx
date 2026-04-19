@@ -1,186 +1,247 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Sparkles, Clock, CheckCircle2, PlayCircle, BookOpen, Brain } from "lucide-react";
-import { StudentAPI } from "@/api";
-import type { TrainingModule } from "@/data/mock";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { TestRunner } from "@/components/TestRunner";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Search,
+  BookOpen,
+  CheckCircle2,
+  ChevronRight,
+  Filter,
+  Sparkles,
+  Trophy,
+  BrainCircuit,
+  Eye,
+  EyeOff
+} from "lucide-react";
+import { getQuestions, Question } from "@/api/question.api";
 import { toast } from "sonner";
-
-const CATEGORIES = ["All", "Coding", "Aptitude", "Core CS", "Soft Skills"] as const;
+import { cn } from "@/lib/utils";
 
 const StudentTraining = () => {
-  const [modules, setModules] = useState<TrainingModule[]>([]);
-  const [filter, setFilter] = useState<(typeof CATEGORIES)[number]>("All");
-  const [quizModule, setQuizModule] = useState<TrainingModule | null>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    StudentAPI.trainingModules().then(setModules);
+    fetchQuestions();
   }, []);
 
-  const filtered = useMemo(
-    () => (filter === "All" ? modules : modules.filter((m) => m.category === filter)),
-    [filter, modules],
-  );
-
-  const recommended = modules.filter((m) => m.recommended);
-
-  const completionByCategory = useMemo(() => {
-    const cats = ["Coding", "Aptitude", "Core CS", "Soft Skills"] as const;
-    return cats.map((c) => {
-      const items = modules.filter((m) => m.category === c);
-      const avg = items.length ? Math.round(items.reduce((s, m) => s + m.progress, 0) / items.length) : 0;
-      return { category: c, percent: avg, count: items.length };
-    });
-  }, [modules]);
-
-  const updateProgress = async (id: string, progress: number) => {
-    setModules((prev) => prev.map((m) => (m.id === id ? { ...m, progress } : m)));
-    await StudentAPI.updateModuleProgress(id, progress);
-    if (progress === 100) toast.success("Module completed 🎉");
+  const fetchQuestions = async () => {
+    try {
+      setLoading(true);
+      const data = await getQuestions();
+      setQuestions(data.data);
+    } catch (error) {
+      toast.error("Failed to load training materials");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <DashboardLayout role="student" title="Training" subtitle="Personalised modules to close your skill gaps fast.">
-      {/* Completion summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {completionByCategory.map((c, i) => (
-          <motion.div
-            key={c.category}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="glass-card rounded-xl p-4"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{c.category}</p>
-              <Badge variant="outline" className="text-[10px]">{c.count}</Badge>
-            </div>
-            <p className="text-2xl font-display font-bold mt-2">{c.percent}%</p>
-            <Progress value={c.percent} className="h-1.5 mt-2" />
-          </motion.div>
-        ))}
-      </div>
+  const toggleReveal = (id: string) => {
+    const newSet = new Set(revealedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setRevealedIds(newSet);
+  };
 
-      {/* Recommended */}
-      {recommended.length > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card rounded-xl p-6 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <h3 className="font-display font-semibold">Recommended for you</h3>
-            <Badge className="bg-primary/15 text-primary border-primary/30">AI-picked</Badge>
+  const allTags = Array.from(new Set(questions.flatMap(q => q.tags.map((t: any) => t.name))));
+
+  const filteredQuestions = questions.filter(q => {
+    const matchesSearch = q.text.toLowerCase().includes(search.toLowerCase()) || 
+                         q.subject?.toLowerCase().includes(search.toLowerCase());
+    const matchesTag = !selectedTag || q.tags.some((t: any) => t.name === selectedTag);
+    return matchesSearch && matchesTag;
+  });
+
+  return (
+    <DashboardLayout 
+      role="student" 
+      title="Training Center" 
+      subtitle="Master concepts through interactive practice questions."
+    >
+      <div className="grid lg:grid-cols-[1fr_300px] gap-8">
+        <div className="space-y-6">
+          {/* Search & Filters */}
+          <div className="glass-card p-4 rounded-xl flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search questions or subjects..." 
+                className="pl-10 bg-secondary/30 border-none h-11"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" className="h-11 px-5 border-border/50">
+              <Filter className="h-4 w-4 mr-2" /> Filters
+            </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {recommended.map((m) => (
-              <div key={m.id} className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-                <p className="font-medium">{m.title}</p>
-                <p className="text-xs text-primary mt-1">{m.reason}</p>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-[10px] text-muted-foreground">{m.estimatedMin}m · {m.difficulty}</span>
-                  <Button size="sm" className="h-7 text-xs bg-gradient-primary text-primary-foreground hover:opacity-90">
-                    Start
-                  </Button>
+
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Badge 
+              variant={!selectedTag ? "default" : "outline"} 
+              className="cursor-pointer px-4 py-1.5"
+              onClick={() => setSelectedTag(null)}
+            >
+              All Topics
+            </Badge>
+            {allTags.map((tag: any) => (
+              <Badge 
+                key={tag}
+                variant={selectedTag === tag ? "default" : "outline"}
+                className={cn(
+                  "cursor-pointer px-4 py-1.5 transition-all",
+                  selectedTag === tag ? "shadow-glow bg-primary text-primary-foreground border-primary" : "border-border/50 hover:bg-secondary"
+                )}
+                onClick={() => setSelectedTag(tag)}
+              >
+                {tag}
+              </Badge>
+            ))}
+          </div>
+
+          <AnimatePresence mode="popLayout">
+            {loading ? (
+              <div className="py-20 text-center">
+                <BrainCircuit className="h-12 w-12 text-primary/30 animate-pulse mx-auto mb-4" />
+                <p className="text-muted-foreground">Loading practice materials...</p>
+              </div>
+            ) : filteredQuestions.length === 0 ? (
+              <div className="py-20 text-center glass-card rounded-2xl">
+                <Search className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium">No questions found</h3>
+                <p className="text-muted-foreground">Try adjusting your filters or search terms.</p>
+              </div>
+            ) : (
+              filteredQuestions.map((q, idx) => (
+                <motion.div
+                  key={q.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="glass-card rounded-2xl overflow-hidden group border border-border/50 hover:border-primary/30 transition-all duration-300"
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                          <BookOpen className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70">{q.subject || "General"}</span>
+                          <h4 className="text-sm font-medium text-muted-foreground">{q.topic || "Core Concept"}</h4>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className={cn(
+                        "text-[10px] h-5",
+                        q.difficulty === "EASY" ? "text-success border-success/30 bg-success/5" :
+                        q.difficulty === "HARD" ? "text-destructive border-destructive/30 bg-destructive/5" :
+                        "text-info border-info/30 bg-info/5"
+                      )}>
+                        {q.difficulty}
+                      </Badge>
+                    </div>
+
+                    <p className="text-lg font-display font-medium leading-relaxed mb-6">
+                      {q.text}
+                    </p>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-2">
+                        {q.tags.map((t: any) => (
+                          <Badge key={t.id} variant="secondary" className="text-[10px] bg-secondary/50 text-muted-foreground">
+                            #{t.name}
+                          </Badge>
+                        ))}
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={cn(
+                          "text-xs font-semibold gap-2",
+                          revealedIds.has(q.id) ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                        )}
+                        onClick={() => toggleReveal(q.id)}
+                      >
+                        {revealedIds.has(q.id) ? <><EyeOff className="h-4 w-4" /> Hide Answer</> : <><Eye className="h-4 w-4" /> Reveal Answer</>}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {revealedIds.has(q.id) && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="bg-primary/5 border-t border-primary/10 px-6 py-4"
+                      >
+                        <div className="flex gap-3">
+                          <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-xs font-bold uppercase tracking-widest text-primary/70 block mb-1">Suggested Answer</span>
+                            <p className="text-sm leading-relaxed text-foreground/90 font-medium">
+                              {q.answer}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Sidebar / Stats */}
+        <div className="space-y-6">
+          <div className="glass-card p-6 rounded-2xl relative overflow-hidden">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="h-5 w-5 text-warning" />
+                <h3 className="font-display font-bold">Your Progress</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Questions Answered</span>
+                  <span className="font-bold">{revealedIds.size}</span>
+                </div>
+                <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((revealedIds.size / Math.max(questions.length, 1)) * 100, 100)}%` }}
+                    className="h-full bg-gradient-to-r from-primary to-primary/60"
+                  />
                 </div>
               </div>
-            ))}
+            </div>
+            <Sparkles className="absolute -bottom-4 -right-4 h-24 w-24 text-primary/5 -rotate-12" />
           </div>
-        </motion.div>
-      )}
 
-      {/* All modules */}
-      <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="space-y-4">
-        <TabsList className="bg-secondary/50 flex-wrap h-auto">
-          {CATEGORIES.map((c) => <TabsTrigger key={c} value={c}>{c}</TabsTrigger>)}
-        </TabsList>
-        <TabsContent value={filter}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filtered.map((m, i) => (
-              <motion.div
-                key={m.id}
-                initial={{ opacity: 0, y: 12 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.04 }}
-                className="glass-card rounded-xl p-5"
-              >
-                <div className="flex items-start justify-between mb-3 gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "rounded-lg p-2.5",
-                      m.category === "Coding" && "bg-primary/10 text-primary",
-                      m.category === "Aptitude" && "bg-info/10 text-info",
-                      m.category === "Core CS" && "bg-warning/10 text-warning",
-                      m.category === "Soft Skills" && "bg-success/10 text-success",
-                    )}>
-                      {m.category === "Coding" ? <BookOpen className="h-5 w-5" /> :
-                       m.category === "Aptitude" ? <Brain className="h-5 w-5" /> :
-                       m.category === "Core CS" ? <BookOpen className="h-5 w-5" /> :
-                       <Sparkles className="h-5 w-5" />}
-                    </div>
-                    <div>
-                      <h3 className="font-display font-semibold">{m.title}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-[10px]">{m.category}</Badge>
-                        <span className="text-[10px] text-muted-foreground">{m.difficulty}</span>
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />{m.estimatedMin}m
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  {m.progress === 100 && (
-                    <Badge className="bg-success/15 text-success border-success/30">
-                      <CheckCircle2 className="h-3 w-3 mr-1" /> Done
-                    </Badge>
-                  )}
+          <div className="glass-card p-6 rounded-2xl">
+            <h3 className="font-display font-bold mb-4 flex items-center gap-2">
+              <BrainCircuit className="h-5 w-5 text-primary" />
+              Topics to Master
+            </h3>
+            <div className="space-y-3">
+              {allTags.slice(0, 5).map((tag: any) => (
+                <div key={tag} className="flex items-center justify-between text-xs group cursor-pointer hover:text-primary transition-colors">
+                  <span className="text-muted-foreground group-hover:text-primary transition-colors">{tag}</span>
+                  <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
                 </div>
-                <Progress value={m.progress} className="h-2" />
-                <div className="flex items-center justify-between mt-3">
-                  <p className="text-xs text-muted-foreground">{m.progress}% complete</p>
-                  <div className="flex gap-2">
-                    {m.hasMockTest && (
-                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setQuizModule(m)}>
-                        <PlayCircle className="h-3.5 w-3.5 mr-1" /> Mock quiz
-                      </Button>
-                    )}
-                    {m.progress < 100 ? (
-                      <Button
-                        size="sm"
-                        className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
-                        onClick={() => updateProgress(m.id, Math.min(100, m.progress + 25))}
-                      >
-                        {m.progress === 0 ? "Start" : "Continue"} ({Math.min(100, m.progress + 25)}%)
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => updateProgress(m.id, 0)}>
-                        Reset
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+              ))}
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
-
-      <Dialog open={!!quizModule} onOpenChange={(o) => !o && setQuizModule(null)}>
-        <DialogContent className="max-w-3xl p-0 gap-0 max-h-[90vh] overflow-hidden">
-          {quizModule && (
-            <TestRunner
-              shortDuration
-              test={{ id: `quiz-${quizModule.id}`, title: `Mock quiz · ${quizModule.title}`, subject: quizModule.category, durationMin: 3 }}
-              onClose={() => setQuizModule(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
     </DashboardLayout>
   );
 };

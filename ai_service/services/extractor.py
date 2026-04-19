@@ -9,12 +9,15 @@ load_dotenv()
 
 class QuestionInfo(BaseModel):
     question_text: Optional[str] = ""
+    answer: Optional[str] = ""
+    options: Optional[List[str]] = []
     tags: Optional[List[str]] = []
     difficulty: Optional[str] = "Medium"
-    reasoning: Optional[str] = ""
+    type: Optional[str] = "MCQ"
 
 class AssessmentExtraction(BaseModel):
     subject: Optional[str] = "Technical Assessment"
+    topic: Optional[str] = ""
     total_questions: Optional[int] = 0
     questions: Optional[List[QuestionInfo]] = []
     overall_difficulty: Optional[str] = "Medium"

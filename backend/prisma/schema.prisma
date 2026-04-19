@@ -6,19 +6,82 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id                  String          @id @default(uuid())
+  email               String          @unique
+  password            String
+  role                Role            @default(STUDENT)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  refreshToken        String?
+  fullName            String?
+  name                String?
+  usn                 String?         @unique
+  StudentProfile      StudentProfile?
+  questions           Question[]
+  createdAssessments  Assessment[]    @relation("CreatedAssessments")
+  assignedAssessments Assessment[]    @relation("AssignedAssessments")
+}
+
+model Question {
+  id           String       @id @default(uuid())
+  text         String
+  answer       String
+  options      Json?    
+  type         String       @default("MCQ") 
+  subject      String?
+  topic        String?
+  difficulty   String?  
+  isVisible    Boolean      @default(false)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
+  uploadedById String
+  tags         Tag[]        @relation("QuestionTags")
+  assessments  Assessment[] @relation("AssessmentQuestions")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Assessment {
+  id           String     @id @default(uuid())
+  title        String
+  description  String?
+  type         String     
+  subject      String?
+  topic        String?
+  scheduledAt  DateTime
+  duration     Int        
+  questions    Question[] @relation("AssessmentQuestions")
+  createdById  String
+  createdBy    User       @relation("CreatedAssessments", fields: [createdById], references: [id])
+  students     User[]     @relation("AssignedAssessments")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Tag {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  questions Question[] @relation("QuestionTags")
+}
+
+model StudentProfile {
+  id              String  @id
+  userId          String  @unique
+  aptitudeScore   Float?
+  codingScore     Float?
+  coreScore       Float?
+  softSkillsScore Float?
+  cgpa            Float?
+  attendance      Float?
+  branch          String?
+  semester        Int?
+  readinessScore  Float?
+  placementStatus String  @default("UNPLACED")
+  User            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
 enum Role {
   STUDENT
   FACULTY
   PLACEMENT
-}
-model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  password     String
-  role         Role     @default(STUDENT)
-  refreshToken String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
 }

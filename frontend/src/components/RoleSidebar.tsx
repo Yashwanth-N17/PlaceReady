@@ -29,6 +29,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
+import { cn } from "@/lib/utils";
 
 export type Role = "student" | "faculty" | "placement";
 
@@ -84,15 +85,11 @@ const MENUS: Record<Role, MenuGroup[]> = {
   ],
 };
 
-const ROLE_META: Record<Role, { label: string; sub: string; icon: any }> = {
-  student: { label: "PlaceReady", sub: "Student", icon: GraduationCap },
-  faculty: { label: "PlaceReady", sub: "Faculty", icon: UserCog },
-  placement: { label: "PlaceReady", sub: "Placement", icon: Briefcase },
+const ROLE_META: Record<Role, { label: string; sub: string; icon: any; color: string }> = {
+  student: { label: "PlaceReady", sub: "Student Portal", icon: GraduationCap, color: "from-primary to-primary/70" },
+  faculty: { label: "PlaceReady", sub: "Faculty Portal", icon: UserCog, color: "from-info to-info/70" },
+  placement: { label: "PlaceReady", sub: "Placement Portal", icon: Briefcase, color: "from-success to-success/70" },
 };
-
-const linkBase =
-  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground w-full";
-const linkActive = "bg-sidebar-accent text-primary font-medium";
 
 export function RoleSidebar({ role }: { role: Role }) {
   const { state } = useSidebar();
@@ -102,35 +99,49 @@ export function RoleSidebar({ role }: { role: Role }) {
   const Icon = meta.icon;
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <NavLink to="/" className="flex items-center gap-2.5">
-          <div className="rounded-md bg-primary p-1.5 shrink-0">
-            <Icon className="h-4 w-4 text-primary-foreground" />
+    <Sidebar
+      collapsible="icon"
+      className="border-r border-sidebar-border bg-sidebar"
+    >
+      {/* Logo / Brand */}
+      <SidebarHeader className="border-b border-sidebar-border px-3 py-3.5">
+        <NavLink to="/" className="flex items-center gap-2.5 min-w-0">
+          <div className={cn("rounded-lg bg-gradient-to-br p-1.5 shrink-0 shadow-sm", meta.color)}>
+            <Icon className="h-4 w-4 text-white" />
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="font-display font-bold text-sm leading-none">{meta.label}</span>
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">{meta.sub}</span>
+              <span className="font-display font-bold text-sm leading-none text-foreground tracking-tight">
+                {meta.label}
+              </span>
+              <span className="text-[10px] text-muted-foreground mt-0.5 leading-none">
+                {meta.sub}
+              </span>
             </div>
           )}
         </NavLink>
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-3">
+      {/* Navigation */}
+      <SidebarContent className="px-2 py-3 gap-0">
         {groups.map((g) => (
-          <SidebarGroup key={g.label}>
+          <SidebarGroup key={g.label} className="mb-3 p-0">
             {!collapsed && (
-              <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-3 mb-1">
+              <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 px-3 mb-1 h-auto py-0">
                 {g.label}
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-0.5">
                 {g.items.map((item) => (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild tooltip={collapsed ? item.title : undefined}>
-                      <NavLink to={item.url} end className={linkBase} activeClassName={linkActive}>
+                      <NavLink
+                        to={item.url}
+                        end
+                        className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm w-full transition-all duration-150 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        activeClassName="!bg-primary/10 !text-primary font-medium border-r-2 border-primary"
+                      >
                         <item.icon className="h-4 w-4 shrink-0" />
                         {!collapsed && <span className="truncate">{item.title}</span>}
                       </NavLink>
@@ -143,10 +154,14 @@ export function RoleSidebar({ role }: { role: Role }) {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-3">
-        <NavLink to="/" className={linkBase}>
+      {/* Footer / Sign out */}
+      <SidebarFooter className="border-t border-sidebar-border px-2 py-2">
+        <NavLink
+          to="/"
+          className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors w-full"
+        >
           <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed && <span className="text-sm">Sign Out</span>}
+          {!collapsed && <span>Sign out</span>}
         </NavLink>
       </SidebarFooter>
     </Sidebar>
