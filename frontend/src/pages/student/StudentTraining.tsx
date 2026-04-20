@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   Search, BookOpen, CheckCircle2, ChevronRight, Sparkles,
-  Trophy, BrainCircuit, Eye, EyeOff, Zap, TrendingUp, TrendingDown, Minus
+  Trophy, BrainCircuit, Eye, EyeOff, Zap, TrendingUp, TrendingDown, Minus,
+  Video, ExternalLink
 } from "lucide-react";
 import { getQuestions } from "@/api/question.api";
 import { StudentAPI } from "@/api";
@@ -335,11 +336,30 @@ const StudentTraining = () => {
                         >
                           <div className="flex gap-3">
                             <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                            <div>
+                            <div className="flex-1">
                               <span className="text-xs font-bold uppercase tracking-widest text-primary/70 block mb-1">Suggested Answer</span>
                               <p className="text-sm leading-relaxed text-foreground/90 font-medium">{q.answer}</p>
                             </div>
                           </div>
+                          
+                          {/* ── Training Module Prompt ── */}
+                          {adaptiveMode && (
+                            <div className="mt-4 pt-4 border-t border-primary/10 flex flex-col items-start">
+                              <p className="text-xs font-bold uppercase tracking-widest text-warning mb-2 flex items-center gap-1.5">
+                                <Sparkles className="h-3.5 w-3.5" /> Need a refresher?
+                              </p>
+                              <a
+                                href={`https://www.youtube.com/results?search_query=${encodeURIComponent(q.subject || q.topic || 'Aptitude')}+tutorial+interview`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-sm text-foreground hover:text-primary bg-secondary hover:bg-secondary/80 px-4 py-2.5 rounded-xl transition-all border border-border/50 shadow-sm"
+                              >
+                                <Video className="h-4 w-4 text-warning" />
+                                <span className="font-medium">Watch 10-minute module on {q.subject || q.topic || 'Core Concept'}</span>
+                                <ExternalLink className="h-3 w-3 ml-1 opacity-50" />
+                              </a>
+                            </div>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>

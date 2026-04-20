@@ -28,7 +28,16 @@ export const NotificationBell = ({ role }: Props) => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    // Initial fetch
     NotificationsAPI.list(role).then(setItems);
+
+    // Lightweight pseudo-realtime polling (every 30 seconds)
+    // Scale-ready architecture for future WebSockets transition
+    const intervalId = setInterval(() => {
+      NotificationsAPI.list(role).then(setItems);
+    }, 30000);
+
+    return () => clearInterval(intervalId);
   }, [role]);
 
   const unread = items.filter((n) => !n.read).length;
