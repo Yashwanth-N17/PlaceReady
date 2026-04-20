@@ -1,7 +1,7 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useCountUp } from "../hooks/useCountUp";
 import { motion, useInView, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles,
@@ -89,8 +89,8 @@ const roles = [
 const NAV_LINKS = [
   { label: "Roles", href: "#roles" },
   { label: "Problem", href: "#problem" },
-  { label: "Features", href: "#features" },
   { label: "Impact", href: "#impact" },
+  { label: "Features", href: "#features" },
 ] as const;
 
 /* ─── AnimatedStat — only counts when visible ────────────────── */
@@ -147,6 +147,7 @@ function AmbientBlobs() {
 
 function Navbar() {
   const { scrollY } = useScroll();
+  const navigate = useNavigate();
   const backgroundColor = useTransform(
     scrollY,
     [0, 80],
@@ -157,6 +158,16 @@ function Navbar() {
     [0, 80],
     ["hsl(220 20% 18% / 0.2)", "hsl(220 20% 18% / 0.5)"]
   );
+
+  const token = localStorage.getItem("accessToken");
+  const role = localStorage.getItem("userRole")?.toLowerCase();
+
+  const handleSignOut = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("userRole");
+    navigate("/");
+    window.location.reload();
+  };
 
   return (
     <motion.nav
@@ -179,7 +190,7 @@ function Navbar() {
         </Link>
 
         <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
-          {NAV_LINKS.map(({ label, href }) => (
+          {NAV_LINKS.filter(link => !(token && link.label === "Roles")).map(({ label, href }) => (
             <a
               key={href}
               href={href}
@@ -191,17 +202,35 @@ function Navbar() {
           ))}
         </div>
 
-        <Link to="/login">
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+        {token ? (
+          <div className="flex items-center gap-4">
+            <Link to={`/${role}`}>
+              <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-foreground">
+                Dashboard
+              </Button>
+            </Link>
             <Button
               size="sm"
               variant="outline"
-              className="border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-medium px-5"
+              onClick={handleSignOut}
+              className="border-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all duration-300 font-medium px-5"
             >
-              Sign in
+              Sign out
             </Button>
-          </motion.div>
-        </Link>
+          </div>
+        ) : (
+          <Link to="/login">
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-medium px-5"
+              >
+                Sign in
+              </Button>
+            </motion.div>
+          </Link>
+        )}
       </div>
     </motion.nav>
   );
@@ -210,9 +239,13 @@ function Navbar() {
 /* ─── Main component ─────────────────────────────────────────── */
 
 const Landing = () => {
+  const navigate = useNavigate();
   const heroRef = useRef<HTMLElement | null>(null);
   const reduceMotion = useReducedMotion();
   const parallax = reduceMotion ? 0 : 1;
+
+  const token = localStorage.getItem("accessToken");
+  const role = localStorage.getItem("userRole")?.toLowerCase();
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -258,14 +291,19 @@ const Landing = () => {
             </motion.div>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-              <a href="#roles">
-                <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 group shadow-glow px-8 h-12">
-                  Get Started <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </a>
-              <Button size="lg" variant="outline" className="border-border/60 bg-muted/20 hover:border-primary/40 h-12">
-                <BarChart3 className="mr-2 h-4 w-4" /> View Demo
-              </Button>
+              {token ? (
+                <Link to={`/${role}`}>
+                  <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 group shadow-glow px-8 h-12">
+                    Enter Dashboard <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+              ) : (
+                <a href="#roles">
+                  <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 group shadow-glow px-8 h-12">
+                    Get Started <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </a>
+              )}
             </div>
 
             <div className="mt-12 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
@@ -281,54 +319,56 @@ const Landing = () => {
       </section>
 
       {/* ── ROLE PICKER ── */}
-      <section id="roles" className="py-24 border-t border-border/50">
-        <div className="container">
-          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
-            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">Get started</p>
-            <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">Choose your portal</h2>
-            <p className="mt-4 text-lg text-muted-foreground leading-relaxed">
-              Each role gets a dedicated workspace tailored to its workflow.
-            </p>
-          </motion.div>
+      {!token && (
+        <section id="roles" className="py-24 border-t border-border/50">
+          <div className="container">
+            <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">Get started</p>
+              <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">Choose your portal</h2>
+              <p className="mt-4 text-lg text-muted-foreground leading-relaxed">
+                Each role gets a dedicated workspace tailored to its workflow.
+              </p>
+            </motion.div>
 
-          <motion.div
-            className="grid md:grid-cols-3 gap-6"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true, margin: "-60px" }}
-          >
-            {roles.map((r) => (
-              <motion.div key={r.id} variants={staggerItem}>
-                <motion.div
-                  whileHover={{ y: -8, scale: 1.01 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="h-full"
-                >
-                  <Link to={r.href} className="block h-full group">
-                    <div className={`glass-card rounded-2xl p-8 h-full transition-all duration-300 border border-border/60 ${r.border} hover:shadow-elevated relative overflow-hidden`}>
-                      <div className={`absolute inset-0 bg-gradient-to-br ${r.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                      <div className="relative z-10">
-                        <div className={`rounded-xl p-3 w-fit mb-6 transition-colors ${r.bg}`}>
-                          <r.icon className={`h-6 w-6 ${r.color}`} />
-                        </div>
-                        <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${r.color} block mb-3`}>
-                          {r.tag}
-                        </span>
-                        <h3 className="text-2xl font-display font-bold text-foreground mb-3">{r.title}</h3>
-                        <p className="text-base text-muted-foreground leading-relaxed mb-6">{r.desc}</p>
-                        <div className={`inline-flex items-center text-sm font-semibold ${r.color}`}>
-                          Enter portal <ArrowUpRight className="ml-1.5 h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            <motion.div
+              className="grid md:grid-cols-3 gap-6"
+              variants={staggerContainer}
+              initial="initial"
+              whileInView="animate"
+              viewport={{ once: true, margin: "-60px" }}
+            >
+              {roles.map((r) => (
+                <motion.div key={r.id} variants={staggerItem}>
+                  <motion.div
+                    whileHover={{ y: -8, scale: 1.01 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="h-full"
+                  >
+                    <Link to={r.href} className="block h-full group">
+                      <div className={`glass-card rounded-2xl p-8 h-full transition-all duration-300 border border-border/60 ${r.border} hover:shadow-elevated relative overflow-hidden`}>
+                        <div className={`absolute inset-0 bg-gradient-to-br ${r.accent} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                        <div className="relative z-10">
+                          <div className={`rounded-xl p-3 w-fit mb-6 transition-colors ${r.bg}`}>
+                            <r.icon className={`h-6 w-6 ${r.color}`} />
+                          </div>
+                          <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${r.color} block mb-3`}>
+                            {r.tag}
+                          </span>
+                          <h3 className="text-2xl font-display font-bold text-foreground mb-3">{r.title}</h3>
+                          <p className="text-base text-muted-foreground leading-relaxed mb-6">{r.desc}</p>
+                          <div className={`inline-flex items-center text-sm font-semibold ${r.color}`}>
+                            Enter portal <ArrowUpRight className="ml-1.5 h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
+                    </Link>
+                  </motion.div>
                 </motion.div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* ── PROBLEM ── */}
       <section id="problem" className="py-24 border-t border-border/50 bg-secondary/10">
@@ -461,11 +501,19 @@ const Landing = () => {
               <p className="text-xl text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed font-light">
                 Join the campuses already running placement seasons on autopilot with PlaceReady.
               </p>
-              <a href="#roles">
-                <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-semibold h-14 px-10 rounded-xl shadow-glow text-lg">
-                  Get Started <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </a>
+              {token ? (
+                <Link to={`/${role}`}>
+                  <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-semibold h-14 px-10 rounded-xl shadow-glow text-lg">
+                    Enter Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              ) : (
+                <a href="#roles">
+                  <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-semibold h-14 px-10 rounded-xl shadow-glow text-lg">
+                    Get Started <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </a>
+              )}
             </div>
           </motion.div>
         </div>

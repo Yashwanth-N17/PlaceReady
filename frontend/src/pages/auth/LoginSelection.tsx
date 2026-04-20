@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { GraduationCap, Users, Briefcase, ArrowLeft } from "lucide-react";
 
 const roles = [
@@ -29,7 +29,19 @@ const roles = [
   },
 ];
 
+import { useEffect } from "react";
+
 const LoginSelection = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    const role = localStorage.getItem("userRole")?.toLowerCase();
+    if (token && role) {
+      navigate(`/${role}`);
+    }
+  }, [navigate]);
+
   return (
     <div className="min-h-screen hero-bg flex flex-col items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 grid-pattern opacity-20" />

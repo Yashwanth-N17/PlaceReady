@@ -25,6 +25,14 @@ export const RoleAuth = ({ role, title, subtitle, icon: Icon, redirectTo, accent
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  useState(() => {
+    const token = localStorage.getItem("accessToken");
+    const userRole = localStorage.getItem("userRole")?.toLowerCase();
+    if (token && userRole === role.toLowerCase()) {
+      navigate(redirectTo);
+    }
+  });
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
