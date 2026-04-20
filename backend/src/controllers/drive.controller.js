@@ -12,6 +12,15 @@ export const getDrives = async (req, res) => {
   }
 };
 
+export const getTrends = async (req, res) => {
+  try {
+    const data = await PlacementService.getTrends();
+    return success(res, data);
+  } catch (err) {
+    return error(res, "Failed to fetch trends", 500, err);
+  }
+};
+
 export const createDrive = async (req, res) => {
   try {
     const { companyId, date, title, role, type, salary, location, description } = req.body;

@@ -20,15 +20,15 @@ import StudentDrives from "./pages/student/StudentDrives";
 import TakeTest from "./pages/student/TakeTest";
 
 import FacultyDashboard from "./pages/faculty/FacultyDashboard";
-import Upload from "./pages/faculty/Upload";
-import MarksUpload from "./pages/faculty/MarksUpload";
 import ScheduleTests from "./pages/faculty/ScheduleTests";
 import ManualReview from "./pages/faculty/ManualReview";
+import Questions from "./pages/faculty/Questions";
 
 import PlacementDashboard from "./pages/placement/PlacementDashboard";
 import Companies from "./pages/placement/Companies";
 import Shortlist from "./pages/placement/Shortlist";
 import Drives from "./pages/placement/Drives";
+import PlacementTrends from "./pages/placement/PlacementTrends";
 
 import Reports from "./pages/Reports";
 import StudentProfile from "./pages/StudentProfile";
@@ -62,11 +62,10 @@ const App = () => (
 
             {/* Faculty */}
             <Route path="/faculty" element={<ProtectedRoute allowedRoles={["FACULTY"]}><FacultyDashboard /></ProtectedRoute>} />
-            <Route path="/faculty/students" element={<ProtectedRoute allowedRoles={["FACULTY"]}><FacultyDashboard /></ProtectedRoute>} />
             <Route path="/faculty/students/:id" element={<ProtectedRoute allowedRoles={["FACULTY"]}><StudentProfile role="faculty" /></ProtectedRoute>} />
-            <Route path="/faculty/marks" element={<ProtectedRoute allowedRoles={["FACULTY"]}><MarksUpload /></ProtectedRoute>} />
             <Route path="/faculty/schedule" element={<ProtectedRoute allowedRoles={["FACULTY"]}><ScheduleTests /></ProtectedRoute>} />
             <Route path="/faculty/review" element={<ProtectedRoute allowedRoles={["FACULTY"]}><ManualReview /></ProtectedRoute>} />
+            <Route path="/faculty/questions" element={<ProtectedRoute allowedRoles={["FACULTY"]}><Questions /></ProtectedRoute>} />
             <Route path="/faculty/reports" element={<ProtectedRoute allowedRoles={["FACULTY"]}><Reports role="faculty" /></ProtectedRoute>} />
 
             {/* Placement */}
@@ -75,7 +74,7 @@ const App = () => (
             <Route path="/placement/shortlist" element={<ProtectedRoute allowedRoles={["PLACEMENT"]}><Shortlist /></ProtectedRoute>} />
             <Route path="/placement/drives" element={<ProtectedRoute allowedRoles={["PLACEMENT"]}><Drives /></ProtectedRoute>} />
             <Route path="/placement/students/:id" element={<ProtectedRoute allowedRoles={["PLACEMENT"]}><StudentProfile role="placement" /></ProtectedRoute>} />
-            <Route path="/placement/trends" element={<ProtectedRoute allowedRoles={["PLACEMENT"]}><Reports role="placement" /></ProtectedRoute>} />
+            <Route path="/placement/trends" element={<ProtectedRoute allowedRoles={["PLACEMENT"]}><PlacementTrends /></ProtectedRoute>} />
             <Route path="/placement/reports" element={<ProtectedRoute allowedRoles={["PLACEMENT"]}><Reports role="placement" /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />

@@ -4,10 +4,21 @@ import { success, error } from "../utils/response.js";
 
 export const getAssessments = async (req, res) => {
   try {
-    const data = await AssessmentService.getAll();
+    const userId = req.user.role === "STUDENT" ? req.user.id : null;
+    const data = await AssessmentService.getAll(userId);
     return success(res, data);
   } catch (err) {
     return error(res, "Failed to load assessments", 500, err);
+  }
+};
+
+export const releaseResults = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const assessment = await AssessmentService.releaseResults(id);
+    return success(res, assessment, "Assessment results released to students");
+  } catch (err) {
+    return error(res, "Failed to release results", 500, err);
   }
 };
 
@@ -20,24 +31,36 @@ export const getAssessmentById = async (req, res) => {
   }
 };
 
-export const createAssessment = async (req, res) => {
-  const { title, subject, topic, type, duration, totalMarks, questionIds } = req.body;
-  
+export const getAssessmentQuestions = async (req, res) => {
   try {
-    const assessment = await prisma.assessment.create({
-      data: {
-        title,
-        subject,
-        topic,
-        type: type || "MCQ",
-        duration: parseInt(duration) || 60,
-        totalMarks: parseInt(totalMarks) || 100,
-        questions: {
-          connect: questionIds.map(id => ({ id }))
-        }
-      }
+    const assessment = await prisma.assessment.findUnique({
+      where: { id: req.params.id },
+      include: { questions: true }
     });
-    return success(res, assessment, "Assessment created successfully", 201);
+    
+    if (!assessment) return error(res, "Assessment not found", 404);
+
+    const mappedQuestions = assessment.questions.map(q => ({
+      id: q.id,
+      question: q.text,
+      options: Array.isArray(q.options) ? q.options : [],
+      correctIndex: Array.isArray(q.options) 
+        ? q.options.findIndex(opt => opt === q.answer || opt.includes(q.answer))
+        : -1,
+      explanation: "Refer to course material for more details.",
+      topic: q.topic || assessment.subject
+    }));
+
+    return success(res, mappedQuestions);
+  } catch (err) {
+    return error(res, "Failed to load questions", 500, err);
+  }
+};
+
+export const createAssessment = async (req, res) => {
+  try {
+    const assessment = await AssessmentService.create(req.body, req.user.id);
+    return success(res, assessment, "Assessment created and scheduled successfully", 201);
   } catch (err) {
     return error(res, "Failed to create assessment", 500, err);
   }

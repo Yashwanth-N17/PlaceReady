@@ -62,8 +62,12 @@ const ScheduleTests = () => {
 
   useEffect(() => {
     FacultyAPI.me().then((m) => { 
-      setMe(m); 
-      setSubject(m.subjects[0] || "");
+      if (m) {
+        setMe(m); 
+        if (m.subjects && m.subjects.length > 0) {
+          setSubject(m.subjects[0]);
+        }
+      }
     });
     FacultyAPI.students().then(setStudents);
   }, []);
@@ -122,7 +126,7 @@ const ScheduleTests = () => {
   });
 
   const visible = scope === "select" ? filteredStudents : 
-                  scope === "mentees" && me ? filteredStudents.filter((s) => me.menteeIds.includes(s.id)) : 
+                  scope === "mentees" && me ? students.filter((s) => me.mentees?.some(m => m.id === s.id)) : 
                   filteredStudents;
 
   const toggleStudent = (id: string) => {
@@ -141,7 +145,7 @@ const ScheduleTests = () => {
     }
     
     const targetIds = scope === "all" ? filteredStudents.map((s) => s.id) : 
-                       scope === "mentees" ? (me?.menteeIds ?? []) : [...selected];
+                       scope === "mentees" ? (me?.mentees?.map(m => m.id) ?? []) : [...selected];
 
     const toastId = toast.loading("Finalizing test schedule...");
     
@@ -385,7 +389,7 @@ const ScheduleTests = () => {
                       <div>
                         <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Question</Label>
                         <Textarea 
-                          value={q.text} 
+                          value={q.text || ""} 
                           onChange={(e) => handleUpdateQuestion(idx, "text", e.target.value)}
                           className="bg-secondary/30 min-h-[80px]"
                         />
@@ -394,7 +398,7 @@ const ScheduleTests = () => {
                         <div>
                           <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Answer</Label>
                           <Input 
-                            value={q.answer} 
+                            value={q.answer || ""} 
                             onChange={(e) => handleUpdateQuestion(idx, "answer", e.target.value)}
                             className="bg-secondary/30"
                           />

@@ -23,7 +23,8 @@ const TakeTest = () => {
                 title: res.data.title,
                 subject: res.data.subject,
                 durationMin: res.data.duration,
-                questionsCount: res.data.questions?.length
+                questionsCount: res.data.questions?.length,
+                resultsReleased: res.data.resultsReleased
               });
            }
          })
@@ -62,7 +63,11 @@ const TakeTest = () => {
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-background">
-      <ExamEnvironment test={test} onClose={() => navigate("/student/tests")} />
+      <ExamEnvironment 
+        test={test} 
+        onClose={() => navigate("/student/tests")} 
+        onSubmitSuccess={() => navigate("/student/tests")}
+      />
     </div>
   );
 };

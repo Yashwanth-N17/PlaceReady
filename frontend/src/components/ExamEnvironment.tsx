@@ -7,7 +7,7 @@ import {
   Clock, CheckCircle2, XCircle, Trophy, 
   AlertCircle, ShieldCheck, Zap, BarChart3,
   Timer, ChevronRight, ChevronLeft, Flag,
-  LayoutDashboard, Info, BookOpen
+  LayoutDashboard, Info, BookOpen, Sparkles
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StudentAPI } from "@/api";
@@ -27,13 +27,14 @@ import {
 } from "@/components/ui/dialog";
 
 interface Props {
-  test: ScheduledTest | { id: string; title: string; subject: string; durationMin: number; questionsCount?: number };
+  test: ScheduledTest | { id: string; title: string; subject: string; durationMin: number; questionsCount?: number; resultsReleased?: boolean };
   onClose: () => void;
+  onSubmitSuccess?: () => void;
 }
 
 type Phase = "intro" | "running" | "result";
 
-export const ExamEnvironment = ({ test, onClose }: Props) => {
+export const ExamEnvironment = ({ test, onClose, onSubmitSuccess }: Props) => {
   const [phase, setPhase] = useState<Phase>("intro");
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -111,9 +112,26 @@ export const ExamEnvironment = ({ test, onClose }: Props) => {
     return () => clearInterval(id);
   }, [phase]);
 
-  const submit = (auto = false) => {
-    if (submittedRef.current) return;
-    submittedRef.current = true;
+  useEffect(() => {
+    if (phase !== "result") return;
+    const timer = setTimeout(() => {
+      onClose();                          // unmount the overlay
+      onSubmitSuccess?.();               // parent handles navigation
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [phase]);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const submit = async (auto = false) => {
+    console.log("submit called", { submittedRef: submittedRef.current, isSubmitting });
+    if (submittedRef.current || isSubmitting) {
+      console.log("blocked by guard");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setShowConfirmSubmit(false);
     
     const payload = {
       answers,
@@ -121,11 +139,22 @@ export const ExamEnvironment = ({ test, onClose }: Props) => {
       focusLossCount: focusLostRef.current
     };
 
-    StudentAPI.submitQuiz(test.id, payload);
-    setPhase("result");
-    setShowConfirmSubmit(false);
-    if (auto) toast.warning("Time's up — auto-submitted");
-    else toast.success("Assessment submitted successfully!");
+    console.log("calling API with payload:", payload);
+    try {
+      if (auto) toast.warning("Time's up — auto-submitted");
+      await StudentAPI.submitQuiz(test.id, payload);
+      console.log("API success");
+      submittedRef.current = true;
+      setPhase("result");
+      toast.success("Assessment submitted successfully!");
+    } catch (error: any) {
+      console.error("Submission error:", error);
+      const msg = error?.response?.data?.message || error?.message || "Network error";
+      toast.error(`Submission failed: ${msg}`);
+      setIsSubmitting(false);
+      // Optional: navigate on error too
+      // setTimeout(() => navigate("/student/tests"), 1500);
+    }
   };
 
   const toggleFlag = (id: string) => {
@@ -244,7 +273,7 @@ export const ExamEnvironment = ({ test, onClose }: Props) => {
                 </div>
                 <div className="min-w-0 leading-tight">
                   <h4 className="font-bold text-sm truncate text-white uppercase tracking-tight">{test.title}</h4>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Active Session • {q.topic}</p>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Active Session • {q.topic || (test as any).subject}</p>
                 </div>
               </div>
 
@@ -261,7 +290,14 @@ export const ExamEnvironment = ({ test, onClose }: Props) => {
                   <p className="text-[10px] text-muted-foreground font-bold uppercase">Candidate Score</p>
                   <p className="text-xs font-bold text-primary">Live Progress Encrypted</p>
                 </div>
-                <Button variant="destructive" size="sm" onClick={() => setShowConfirmSubmit(true)} className="font-bold shadow-lg h-9 px-6 bg-destructive hover:bg-destructive/90">Submit Assessment</Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => { console.log("opening confirm"); setShowConfirmSubmit(true); }} 
+                  className="font-bold shadow-lg h-9 px-6 bg-destructive hover:bg-destructive/90"
+                >
+                  Submit Assessment
+                </Button>
               </div>
             </div>
 
@@ -272,7 +308,7 @@ export const ExamEnvironment = ({ test, onClose }: Props) => {
               <div className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-12 bg-[url('/grid.svg')] bg-center bg-background/50 border-x border-white/5 scroll-smooth">
                 <div className="max-w-3xl mx-auto space-y-8">
                   <motion.div 
-                    key={q.id}
+                    key={q.id || `question-${current}`}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -280,46 +316,60 @@ export const ExamEnvironment = ({ test, onClose }: Props) => {
                   >
                     <div className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="border-primary/30 text-primary text-[10px] font-mono">Q{current + 1} OF {questions.length}</Badge>
-                        <Badge variant="secondary" className="text-[10px] bg-secondary/10 uppercase tracking-widest">{q.topic}</Badge>
+                        <Badge variant="outline" className="border-primary/30 text-primary text-[10px] font-mono">QUESTION {current + 1} OF {questions.length}</Badge>
+                        <Badge variant="secondary" className="text-[10px] bg-secondary/10 uppercase tracking-widest">{q.topic || "General"}</Badge>
                         <Badge variant="outline" className="text-[10px] border-white/10 text-muted-foreground ml-auto hidden sm:block">Shortcut: 1-4 to Toggle</Badge>
                       </div>
                       <h3 className="text-xl font-display font-medium text-white leading-snug">
-                        {q.question}
+                        {q.question || (q as any).text}
                       </h3>
                     </div>
 
                     <div className="grid grid-cols-1 gap-3">
-                      {q.options.map((opt, i) => {
-                        const isSelected = answers[q.id] === i;
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => setAnswers(prev => ({ ...prev, [q.id]: i }))}
-                            className={cn(
-                              "group flex items-center p-4 rounded-xl border-2 text-left transition-all duration-300 relative overflow-hidden",
-                              isSelected 
-                                ? "border-primary bg-primary/10 text-white shadow-[0_0_20px_hsl(var(--primary)/0.05)] scale-[1.01]" 
-                                : "border-white/5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
-                            )}
-                          >
-                            <span className={cn(
-                              "h-8 w-8 rounded-lg flex items-center justify-center font-mono mr-3 border text-xs transition-all duration-300",
-                              isSelected 
-                                ? "bg-primary text-primary-foreground border-primary" 
-                                : "bg-white/5 border-white/10 group-hover:border-primary/50 group-hover:text-primary"
-                            )}>
-                              {String.fromCharCode(65 + i)}
-                            </span>
-                            <span className="text-sm font-medium">{opt}</span>
-                            {isSelected && (
-                              <motion.div layoutId="choice" className="ml-auto">
-                                <CheckCircle2 className="h-5 w-5 text-primary animate-in fade-in zoom-in-50" />
-                              </motion.div>
-                            )}
-                          </button>
-                        );
-                      })}
+                      {q.options && q.options.length > 0 && q.type !== "SUBJECTIVE" ? (
+                        q.options.map((opt, i) => {
+                          const isSelected = answers[q.id] === i;
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => setAnswers(prev => ({ ...prev, [q.id]: i }))}
+                              className={cn(
+                                "group flex items-center p-4 rounded-xl border-2 text-left transition-all duration-300 relative overflow-hidden",
+                                isSelected 
+                                  ? "border-primary bg-primary/10 text-white shadow-[0_0_20px_hsl(var(--primary)/0.05)] scale-[1.01]" 
+                                  : "border-white/5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
+                              )}
+                            >
+                              <span className={cn(
+                                "h-8 w-8 rounded-lg flex items-center justify-center font-mono mr-3 border text-xs transition-all duration-300",
+                                isSelected 
+                                  ? "bg-primary text-primary-foreground border-primary" 
+                                  : "bg-white/5 border-white/10 group-hover:border-primary/50 group-hover:text-primary"
+                              )}>
+                                {String.fromCharCode(65 + i)}
+                              </span>
+                              <span className="text-sm font-medium">{opt}</span>
+                              {isSelected && (
+                                <motion.div layoutId="choice" className="ml-auto">
+                                  <CheckCircle2 className="h-5 w-5 text-primary animate-in fade-in zoom-in-50" />
+                                </motion.div>
+                              )}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="space-y-4">
+                          <textarea
+                            className="w-full bg-white/5 border-2 border-white/5 rounded-2xl p-6 text-white min-h-[200px] focus:border-primary/50 focus:bg-primary/5 outline-none transition-all placeholder:text-slate-600"
+                            placeholder="Type your comprehensive answer here..."
+                            value={answers[q.id] || ""}
+                            onChange={(e) => setAnswers(prev => ({ ...prev, [q.id]: e.target.value as any }))}
+                          />
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                            <Info className="h-3 w-3" /> Auto-saved locally
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 </div>
@@ -410,41 +460,6 @@ export const ExamEnvironment = ({ test, onClose }: Props) => {
               )}
             </div>
 
-            {/* SUBMISSION CONFIRMATION MODAL */}
-            <Dialog open={showConfirmSubmit} onOpenChange={setShowConfirmSubmit}>
-              <DialogContent className="glass-card border-white/10 bg-slate-900 sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-bold flex items-center gap-2">Ready to finish?</DialogTitle>
-                  <DialogDescription className="text-slate-400">
-                    You have answered <span className="text-white font-bold">{Object.keys(answers).length}</span> out of <span className="text-white font-bold">{questions.length}</span> questions.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4 space-y-4">
-                  {flags.size > 0 && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-warning/10 border border-warning/10 text-warning text-xs">
-                      <AlertCircle className="h-4 w-4" />
-                      <p>You still have <span className="font-bold">{flags.size} items flagged</span> for review. Review them now?</p>
-                    </div>
-                  )}
-                  {Object.keys(answers).length < questions.length && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/10 text-destructive text-xs">
-                      <AlertCircle className="h-4 w-4" />
-                      <p>Warning: You have <span className="font-bold">{questions.length - Object.keys(answers).length} unanswered</span> questions.</p>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter className="flex gap-2">
-                  <Button variant="ghost" onClick={() => setShowConfirmSubmit(false)}>Go back</Button>
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => submit(false)}
-                    className="font-bold px-8 bg-gradient-primary border-none shadow-glow text-primary-foreground"
-                  >
-                    Submit Now
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </motion.div>
         )}
 
@@ -452,136 +467,201 @@ export const ExamEnvironment = ({ test, onClose }: Props) => {
         {phase === "result" && (
           <motion.div key="result" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-8 h-full overflow-y-auto">
             <div className="max-w-5xl mx-auto space-y-8">
-              <div className="text-center space-y-4">
-                <div className="h-20 w-20 rounded-3xl bg-gradient-primary flex items-center justify-center shadow-glow mx-auto rotate-12">
-                  <Trophy className="h-10 w-10 text-primary-foreground -rotate-12" />
+              {!(test as any).resultsReleased ? (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
+                   <div className="h-24 w-24 rounded-full bg-success/10 flex items-center justify-center text-success mb-4 scale-125 animate-pulse">
+                     <CheckCircle2 className="h-12 w-12" />
+                   </div>
+                   <div className="space-y-2">
+                     <h2 className="text-4xl font-display font-bold">Assessment Submitted!</h2>
+                     <p className="text-xl text-muted-foreground">Your responses have been securely recorded.</p>
+                     <p className="text-sm text-primary animate-pulse">Redirecting to your dashboard...</p>
+                   </div>
+                   <div className="glass-card p-6 rounded-2xl border-warning/20 bg-warning/5 max-w-md">
+                     <div className="flex items-start gap-4 text-left">
+                       <AlertCircle className="h-6 w-6 text-warning shrink-0 mt-0.5" />
+                       <div>
+                         <h4 className="font-bold text-warning">Pending Faculty Review</h4>
+                         <p className="text-sm text-muted-foreground mt-1">Your submission is under review. You'll be notified when your mentor releases the final results.</p>
+                       </div>
+                     </div>
+                   </div>
+                   <Button size="lg" onClick={onClose} className="bg-white text-black font-bold px-16 h-14 rounded-2xl hover:bg-slate-200 transition-all shadow-2xl">
+                     Go to Tests Dashboard
+                   </Button>
                 </div>
-                <h2 className="text-4xl font-display font-bold">Assessment Complete</h2>
-                <div className="flex items-center justify-center gap-2">
-                  <Badge className="bg-success/20 text-success border-success/20">Session Verified</Badge>
-                  <Badge className="bg-primary/20 text-primary border-primary/20">Readiness Synced</Badge>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="text-center space-y-4">
+                    <div className="h-20 w-20 rounded-3xl bg-gradient-primary flex items-center justify-center shadow-glow mx-auto rotate-12">
+                      <Trophy className="h-10 w-10 text-primary-foreground -rotate-12" />
+                    </div>
+                    <h2 className="text-4xl font-display font-bold">Assessment Complete</h2>
+                    <div className="flex items-center justify-center gap-2">
+                      <Badge className="bg-success/20 text-success border-success/20">Session Verified</Badge>
+                      <Badge className="bg-primary/20 text-primary border-primary/20">Readiness Synced</Badge>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Score Card */}
-                <div className="glass-card rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-4 border-primary/20 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -mr-16 -mt-16" />
-                  <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Global Readiness Score</h4>
-                  <div className="relative">
-                    <svg className="h-40 w-40 transform -rotate-90">
-                      <circle cx="80" cy="80" r="70" className="stroke-secondary/30 fill-none" strokeWidth="12" />
-                      <motion.circle 
-                        cx="80" cy="80" r="70" 
-                        initial={{ strokeDasharray: "440", strokeDashoffset: "440" }}
-                        animate={{ strokeDashoffset: String(440 - (440 * stats.score) / 100) }}
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                        className="stroke-primary fill-none shadow-glow" strokeWidth="12" strokeLinecap="round" 
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-5xl font-display font-bold text-gradient">{stats.score}%</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-4 w-full relative z-10">
-                    <div className="bg-secondary/30 backdrop-blur-md rounded-xl p-3 flex-1 border border-white/5">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Accuracy</p>
-                      <p className="font-bold text-lg">{stats.correct}/{stats.total}</p>
-                    </div>
-                    <div className="bg-secondary/30 backdrop-blur-md rounded-xl p-3 flex-1 border border-white/5">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Time</p>
-                      <p className="font-bold text-lg">{Math.round((totalSeconds - seconds) / 60)}m</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Radar Mastery Chart */}
-                <div className="lg:col-span-2 glass-card rounded-3xl p-8 flex flex-col h-[400px]">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-bold flex items-center gap-2 uppercase tracking-tighter"><BarChart3 className="h-4 w-4 text-primary" /> Multi-Topic Readiness Matrix</h4>
-                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                  </div>
-                  <div className="flex-1 w-full min-h-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={stats.radarData}>
-                        <PolarGrid stroke="rgba(255,255,255,0.05)" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 'bold' }} />
-                        <Radar
-                          name="Performance"
-                          dataKey="score"
-                          stroke="hsl(var(--primary))"
-                          fill="hsl(var(--primary))"
-                          fillOpacity={0.2}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              {/* Behavioral Insights */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="glass-card rounded-2xl p-6 space-y-4 border-l-4 border-l-warning/50">
-                  <h4 className="font-bold flex items-center gap-2"><Zap className="h-4 w-4 text-warning" /> Behavioral Engagement Analysis</h4>
-                  <div className="space-y-3 pt-2">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground font-medium">Session Consistency</span>
-                      <span className="text-success font-bold tracking-tight">HIGH</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground font-medium">Focus Deviations</span>
-                      <span className={cn(
-                        "font-bold tabular-nums",
-                        focusLostRef.current === 0 ? "text-success" : "text-destructive"
-                      )}>
-                        {focusLostRef.current} DETECTED
-                      </span>
-                    </div>
-                    <div className="mt-4 bg-secondary/20 p-4 rounded-xl border border-white/5 text-[11px] text-slate-400 leading-relaxed font-medium">
-                      {focusLostRef.current === 0 
-                        ? "PRO-STATUS: You showed exceptional behavioral integrity. No window switches or focus losses detected. This significantly boosts your placement profile."
-                        : "DEVELOPMENT NEEDED: Multiple focus deviations detected. Real-world proctors flag these behaviors. Aim for 0 deviations in next 'Strict' session."}
-                    </div>
-                  </div>
-                </div>
-                <div className="glass-card rounded-2xl p-6 bg-primary/[0.03] border-primary/10">
-                  <h4 className="font-bold mb-6 text-sm flex items-center gap-2 uppercase tracking-widest"><Sparkles className="h-4 w-4 text-primary" /> AI Recommended Drills</h4>
-                  <div className="space-y-3">
-                    {stats.radarData.filter(d => d.score < 60).length > 0 ? (
-                      stats.radarData.filter(d => d.score < 60).map(d => (
-                        <div key={d.subject} className="bg-background border border-border/50 p-4 rounded-2xl flex items-center justify-between group cursor-pointer hover:border-primary/50 transition-all hover:bg-primary/5 shadow-sm">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive group-hover:scale-110 transition-transform">
-                              <BookOpen className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold font-display uppercase tracking-tight">Focus: {d.subject}</p>
-                              <p className="text-[10px] text-muted-foreground">Critical Gap Identified ({d.score}%)</p>
-                            </div>
-                          </div>
-                          <Button variant="ghost" size="icon" className="group-hover:text-primary"><ChevronRight className="h-4 w-4" /></Button>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Score Card */}
+                    <div className="glass-card rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-4 border-primary/20 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl -mr-16 -mt-16" />
+                      <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Global Readiness Score</h4>
+                      <div className="relative">
+                        <svg className="h-40 w-40 transform -rotate-90">
+                          <circle cx="80" cy="80" r="70" className="stroke-secondary/30 fill-none" strokeWidth="12" />
+                          <motion.circle 
+                            cx="80" cy="80" r="70" 
+                            initial={{ strokeDasharray: "440", strokeDashoffset: "440" }}
+                            animate={{ strokeDashoffset: String(440 - (440 * stats.score) / 100) }}
+                            transition={{ duration: 1.5, ease: "easeOut" }}
+                            className="stroke-primary fill-none shadow-glow" strokeWidth="12" strokeLinecap="round" 
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-5xl font-display font-bold text-gradient">{stats.score}%</span>
                         </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-10">
-                         <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4 text-success"><ShieldCheck className="h-6 w-6" /></div>
-                         <p className="text-sm font-bold">Zero Mastery Gaps Detected</p>
-                         <p className="text-xs text-muted-foreground mt-1">Excellent performance across all assessed tags.</p>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                      <div className="flex gap-4 w-full relative z-10">
+                        <div className="bg-secondary/30 backdrop-blur-md rounded-xl p-3 flex-1 border border-white/5">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold">Accuracy</p>
+                          <p className="font-bold text-lg">{stats.correct}/{stats.total}</p>
+                        </div>
+                        <div className="bg-secondary/30 backdrop-blur-md rounded-xl p-3 flex-1 border border-white/5">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold">Time</p>
+                          <p className="font-bold text-lg">{Math.round((totalSeconds - seconds) / 60)}m</p>
+                        </div>
+                      </div>
+                    </div>
 
-              <div className="flex justify-center pt-8">
-                <Button size="lg" onClick={onClose} className="bg-white text-black font-bold px-16 h-14 rounded-2xl hover:bg-slate-200 transition-all active:scale-95 shadow-2xl">
-                  Exit to Portal Dashboard
-                </Button>
-              </div>
+                    {/* Radar Mastery Chart */}
+                    <div className="lg:col-span-2 glass-card rounded-3xl p-8 flex flex-col h-[400px]">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-bold flex items-center gap-2 uppercase tracking-tighter"><BarChart3 className="h-4 w-4 text-primary" /> Multi-Topic Readiness Matrix</h4>
+                        <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                      </div>
+                      <div className="flex-1 w-full min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={stats.radarData}>
+                            <PolarGrid stroke="rgba(255,255,255,0.05)" />
+                            <PolarAngleAxis dataKey="subject" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 'bold' }} />
+                            <Radar
+                              name="Performance"
+                              dataKey="score"
+                              stroke="hsl(var(--primary))"
+                              fill="hsl(var(--primary))"
+                              fillOpacity={0.2}
+                            />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Behavioral Insights */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="glass-card rounded-2xl p-6 space-y-4 border-l-4 border-l-warning/50">
+                      <h4 className="font-bold flex items-center gap-2"><Zap className="h-4 w-4 text-warning" /> Behavioral Engagement Analysis</h4>
+                      <div className="space-y-3 pt-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground font-medium">Session Consistency</span>
+                          <span className="text-success font-bold tracking-tight">HIGH</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground font-medium">Focus Deviations</span>
+                          <span className={cn(
+                            "font-bold tabular-nums",
+                            focusLostRef.current === 0 ? "text-success" : "text-destructive"
+                          )}>
+                            {focusLostRef.current} DETECTED
+                          </span>
+                        </div>
+                        <div className="mt-4 bg-secondary/20 p-4 rounded-xl border border-white/5 text-[11px] text-slate-400 leading-relaxed font-medium">
+                          {focusLostRef.current === 0 
+                            ? "PRO-STATUS: You showed exceptional behavioral integrity. No window switches or focus losses detected. This significantly boosts your placement profile."
+                            : "DEVELOPMENT NEEDED: Multiple focus deviations detected. Real-world proctors flag these behaviors. Aim for 0 deviations in next 'Strict' session."}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="glass-card rounded-2xl p-6 bg-primary/[0.03] border-primary/10">
+                      <h4 className="font-bold mb-6 text-sm flex items-center gap-2 uppercase tracking-widest"><Sparkles className="h-4 w-4 text-primary" /> AI Recommended Drills</h4>
+                      <div className="space-y-3">
+                        {stats.radarData.filter(d => d.score < 60).length > 0 ? (
+                          stats.radarData.filter(d => d.score < 60).map(d => (
+                            <div key={d.subject} className="bg-background border border-border/50 p-4 rounded-2xl flex items-center justify-between group cursor-pointer hover:border-primary/50 transition-all hover:bg-primary/5 shadow-sm">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive group-hover:scale-110 transition-transform">
+                                  <BookOpen className="h-5 w-5" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold font-display uppercase tracking-tight">Focus: {d.subject}</p>
+                                  <p className="text-[10px] text-muted-foreground">Critical Gap Identified ({d.score}%)</p>
+                                </div>
+                              </div>
+                              <Button variant="ghost" size="icon" className="group-hover:text-primary"><ChevronRight className="h-4 w-4" /></Button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-10">
+                             <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4 text-success"><ShieldCheck className="h-6 w-6" /></div>
+                             <p className="text-sm font-bold">Zero Mastery Gaps Detected</p>
+                             <p className="text-xs text-muted-foreground mt-1">Excellent performance across all assessed tags.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center pt-8">
+                    <Button size="lg" onClick={onClose} className="bg-white text-black font-bold px-16 h-14 rounded-2xl hover:bg-slate-200 transition-all active:scale-95 shadow-2xl">
+                      Exit to Portal Dashboard
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* SUBMISSION CONFIRMATION MODAL - Root level for stability */}
+      <Dialog open={showConfirmSubmit} onOpenChange={setShowConfirmSubmit}>
+        <DialogContent className="glass-card border-white/10 bg-slate-900 sm:max-w-md z-[200]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Ready to finish?</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              You have answered <span className="text-white font-bold">{Object.keys(answers).length}</span> out of <span className="text-white font-bold">{questions.length}</span> questions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            {flags.size > 0 && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-warning/10 border border-warning/10 text-warning text-xs">
+                <AlertCircle className="h-4 w-4" />
+                <p>You still have <span className="font-bold">{flags.size} items flagged</span> for review.</p>
+              </div>
+            )}
+            {Object.keys(answers).length < questions.length && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/10 text-destructive text-xs">
+                <AlertCircle className="h-4 w-4" />
+                <p>You have <span className="font-bold">{questions.length - Object.keys(answers).length} unanswered</span> questions.</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button variant="ghost" onClick={() => setShowConfirmSubmit(false)}>Go back</Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => { console.log("Submit Now clicked"); submit(false); }}
+              disabled={isSubmitting}
+              className="font-bold px-8 bg-gradient-primary border-none shadow-glow text-primary-foreground"
+            >
+              {isSubmitting ? "Submitting..." : "Submit Now"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

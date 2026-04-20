@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { StudentAPI } from "@/api";
+import { cn } from "@/lib/utils";
 
 /* ── Recharts tooltip style ── */
 const tooltipStyle = {
@@ -38,17 +39,30 @@ const CHART = {
 };
 
 const StudentDashboard = () => {
-  const [user, setUser] = useState<{ name: string } | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [data, setData] = useState<any>(null);
   const [tests, setTests] = useState<any[]>([]);
   const [results, setResults] = useState<any[]>([]);
+  const [syncing, setSyncing] = useState(false);
+
+  const fetchDashboard = () => StudentAPI.dashboard().then(setData);
 
   useEffect(() => {
     StudentAPI.me().then(setUser);
-    StudentAPI.dashboard().then(setData);
+    fetchDashboard();
     StudentAPI.tests().then(setTests);
     StudentAPI.results().then(setResults);
   }, []);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await StudentAPI.refreshReadiness();
+      await fetchDashboard();
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const upcoming = tests.filter((t) => t.status === "upcoming").slice(0, 3);
   const recent = results.slice(0, 4);
@@ -58,7 +72,39 @@ const StudentDashboard = () => {
       role="student"
       title={`Welcome back, ${user && user.name ? user.name.split(" ")[0] : "Student"}`}
       subtitle="Here's your placement readiness overview."
+      actions={
+        <Button 
+          size="sm" 
+          onClick={handleSync} 
+          disabled={syncing}
+          className="bg-primary/20 text-primary hover:bg-primary/30 border border-primary/20"
+        >
+          <Sparkles className={cn("h-4 w-4 mr-2", syncing && "animate-spin")} />
+          {syncing ? "Syncing..." : "Sync with Gemini"}
+        </Button>
+      }
     >
+      {/* AI Feedback Banner */}
+      {data?.profile?.aiFeedback && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="mb-6 p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-start gap-4 shadow-glow"
+        >
+          <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0 shadow-sm">
+            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="text-[10px] font-bold text-primary uppercase tracking-[0.15em]">AI Growth Strategy</h4>
+              <Badge variant="outline" className="text-[9px] h-4 border-primary/20 bg-primary/10 text-primary px-1.5">Personalized</Badge>
+            </div>
+            <p className="text-sm text-foreground/90 font-medium leading-relaxed italic">
+              "{data.profile.aiFeedback}"
+            </p>
+          </div>
+        </motion.div>
+      )}
       {/* ── Top row: Ring + Stats ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
         <motion.div
@@ -67,13 +113,13 @@ const StudentDashboard = () => {
           transition={{ duration: 0.4 }}
           className="glass-card rounded-xl p-6 flex flex-col items-center justify-center gap-3"
         >
-          <ReadinessRing value={data?.readiness ?? 0} />
+          <ReadinessRing value={data?.stats?.readiness ?? 0} />
           <div className="text-center">
             <Badge className="bg-success/10 text-success border-success/20 text-xs font-medium">
               Real-time Readiness
             </Badge>
             <p className="text-xs text-muted-foreground mt-2 max-w-[180px]">
-              Based on your recent assessment performance.
+              AI-calculated based on your history.
             </p>
           </div>
         </motion.div>
@@ -109,7 +155,7 @@ const StudentDashboard = () => {
           <StatCard
             icon={Sparkles}
             label="Prep Score"
-            value={(data?.readiness ?? 0).toString()}
+            value={(data?.stats?.readiness ?? 0).toString()}
             change="Data-backed"
             changeType="neutral"
             delay={0.2}

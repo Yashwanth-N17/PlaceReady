@@ -1,6 +1,6 @@
 # 🚀 PlaceReady: AI-Powered Placement Mastery Ecosystem
 
-PlaceReady is a high-performance, intelligent platform designed to bridge the gap between academic curriculum and corporate requirements. It leverages **Gemini 1.5 Pro/Flash** to provide real-time readiness analytics, behavioral tracking, and curriculum optimization.
+PlaceReady is a high-performance, intelligent platform designed to bridge the gap between academic curriculum and corporate requirements. It leverages **Gemini 1.5 Pro/Flash** to provide real-time readiness analytics, behavioral tracking, and adaptive learning paths.
 
 ---
 
@@ -8,27 +8,33 @@ PlaceReady is a high-performance, intelligent platform designed to bridge the ga
 
 PlaceReady operates on a decentralized, multi-service architecture for maximum performance and AI scalability:
 
-1.  **Frontend (React/Vite)**: Premium UI with Cinema-Mode exam environments and detailed student performance radar charts.
-2.  **Core Backend (Node.js/Express)**: Handles business logic, RBAC security, and Prisma-based database orchestration.
-3.  **AI Service (Python/FastAPI)**: A dedicated service for heavy AI processing, PDF/Excel text extraction, and Gemini-powered tag correlation.
+1.  **Frontend (React/Vite/TS)**: Premium UI with Cinema-Mode exam environments, adaptive dashboards, and detailed recruitment analytics.
+2.  **Core Backend (Node.js/Express)**: Handles business logic, RBAC security, eligibility enforcement, and Prisma-based database orchestration.
+3.  **AI Service (Python/FastAPI)**: A dedicated service for heavy AI processing, PDF/Excel text extraction, and Gemini-powered readiness prediction.
 
 ---
 
 ## 🔥 Key Technical Features
 
-### 1. High-Stakes Student Test Portal
-*   **Cinema-Mode UI**: A distraction-free, full-screen environment for assessments.
-*   **Behavioral Tracking**: Real-time detection of tab-switching and focus loss to calculate an "Integrity Score."
-*   **Mastery Radar Charts**: Multi-dimensional results showing readiness across specific technical tags.
+### 1. Adaptive Practice Engine (`Adaptive-AI`)
+*   **Dynamic Scaling**: Questions automatically adjust difficulty (EASY → MEDIUM → HARD) in real-time based on the student's last 3 responses.
+*   **Targeted Remediation**: Highlights "Target Difficulty" questions with visual glow effects to guide students toward mastery.
 
-### 2. Faculty Big Data Lens
-*   **Curriculum Gap Matrix**: Heatmaps showing real-time departmental failure rates by specific topic tags (e.g., Pointer Arithmetic).
-*   **Readiness Lift AI**: Quantifies the potential improvement in the department's placement readiness if specific gaps are closed.
-*   **Cleanup Triggers**: Instant scheduling of "Review Sessions" for high-failure topics with one click.
+### 2. Behavioral Benchmarking (`Proctor-AI`)
+*   **Cinema-Mode Environments**: Distraction-free assessment zones with strict proctoring.
+*   **Discipline Scoring**: Real-time tracking of tab-switching and focus loss, converted into a **Professional Discipline Score** visible to recruiters.
+*   **Benchmarking Radar**: Visual compare of technical readiness vs. behavioral integrity.
 
-### 3. AI-Powered Test Extraction
-*   **Multi-Format Logic**: Upload question papers in **PDF** or **Excel** formats.
-*   **Gemini Engine**: Automatically extracts questions, maps technical tags, and identifies curriculum gaps during the scheduling phase.
+### 3. Smart Shortlisting & Eligibility 
+*   **Strict Gating**: Drive applications are programmatically locked if students don't meet company-specific **CGPA** or **AI-Readiness** cutoffs.
+*   **Benchmarking Matrix**: Placement officers can filter the pool using academic, technical, and behavioral "Discipline" filters simultaneously.
+
+### 4. Advanced Insights & Trends
+*   **Historical Trends**: Decoupled time-series analytics showing monthly readiness growth and Year-over-Year (YoY) placement success.
+*   **Segmented Reports**: Interactive branch comparisons (Radar/Bar) and Company Tier breakdowns (Product vs Service conversion).
+
+### 5. AI Sanity Checker
+*   **Extraction Validation**: automatically flags 8 types of issues (missing text, ambiguous answers, MCQ validity) during PDF question extraction to ensure 100% data integrity.
 
 ---
 
@@ -37,7 +43,7 @@ PlaceReady operates on a decentralized, multi-service architecture for maximum p
 ### 1. Prerequisites
 *   Node.js (v18+)
 *   Python (3.10+)
-*   PostgreSQL / MongoDB (Prisma Supported)
+*   PostgreSQL (Prisma Supported)
 *   **Gemini API Key** (Get it from [Google AI Studio](https://aistudio.google.com/))
 
 ### 2. Service-Wise Installation
@@ -46,16 +52,17 @@ PlaceReady operates on a decentralized, multi-service architecture for maximum p
 # 1. CORE BACKEND
 cd backend
 npm install
-# Configure .env with DATABASE_URL, JWT_SECRET, and AI_SERVICE_URL=http://localhost:8000
+# Configure .env with DATABASE_URL, JWT_SECRET, and AI_SERVICE_URL
 
 # 2. FRONTEND
 cd ../frontend
 npm install
+# Set VITE_API_URL in .env
 
 # 3. AI SERVICE (Python)
 cd ../ai_service
 pip install -r requirements.txt
-# Configure .env with GEMINI_API_KEY=your_key_here
+# Configure .env with GEMINI_API_KEY
 ```
 
 ### 3. Running the Ecosystem
@@ -66,52 +73,8 @@ Open three terminal windows and run:
 
 ---
 
-## 🔐 Credentials for Testing
-| Role | Email | Password |
-| :--- | :--- | :--- |
-| **Student** | [EMAIL_ADDRESS] | password123 |
-| **Faculty** | [EMAIL_ADDRESS] | password123 |
-| **Placement** | [EMAIL_ADDRESS] | password123 |
-
----
-
-## 📡 API Documentation (Technical Reference)
-
-### 1. Authentication
-*   **`POST /api/auth/login`**
-    *   **Body**: `{ "email": "...", "password": "...", "role": "STUDENT|FACULTY|PLACEMENT" }`
-    *   **Response**: `200 OK` + HTTP-only Cookie (`refreshToken`) + JSON `{ "accessToken": "...", "user": {...} }`
-*   **`GET /api/auth/me`** (Requires Token)
-    *   **Description**: Returns the current session user data.
-*   **`POST /api/auth/logout`**
-    *   **Description**: Clears the authentication cookies.
-
-### 2. AI & Faculty Operations
-*   **`POST /api/faculty/extract-metadata`** (Requires Faculty Role)
-    *   **Type**: `multipart/form-data`
-    *   **Body**: `file` (PDF or Excel)
-    *   **Response**: 
-      ```json
-      {
-        "success": true,
-        "data": {
-          "subject": "...",
-          "questions": [{ "question_text": "...", "tags": ["..."], "difficulty": "..." }],
-          "suggested_curriculum_gaps": ["..."]
-        }
-      }
-      ```
-
-### 3. Student Operations
-*   **`GET /api/student/quizzes`** (Requires Student Role)
-    *   **Description**: Retrieves scheduled tests based on the student's department/batch.
-*   **`POST /api/student/submit`** (Requires Student Role)
-    *   **Body**: `{ "testId": "...", "answers": { "q1": 0, "q2": 3 } }`
-
----
-
-## 🧬 Tech Stack
-*   **Analytics**: Recharts, Framer Motion
-*   **AI Stack**: Google Generative AI (Gemini), FastAPI, Pandas, PyPDF
-*   **ORM**: Prisma (PostgreSQL/SQL)
-*   **Frontend**: Tailwind CSS, Shadcn UI, Lucide Icons
+## 🏎️ Tech Stack
+*   **UX/UI**: Framer Motion, Recharts, Shadcn UI, Tailwind CSS
+*   **Core**: React 18, TypeScript, Vite
+*   **Intelligence**: Google Gemini-1.5, FastAPI, PyPDF
+*   **Infrastructure**: Prisma ORM, Node.js, Express, PostgreSQL

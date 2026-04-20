@@ -53,16 +53,14 @@ const MENUS: Record<Role, MenuGroup[]> = {
       label: "Manage",
       items: [
         { title: "Overview", url: "/faculty", icon: LayoutDashboard },
-        { title: "My Mentees", url: "/faculty/students", icon: Users },
+        { title: "Question Bank", url: "/faculty/questions", icon: FileText },
         { title: "Schedule Tests", url: "/faculty/schedule", icon: CalendarDays },
         { title: "Manual Review", url: "/faculty/review", icon: ClipboardList },
       ],
     },
     {
-      label: "Data",
+      label: "Analytics",
       items: [
-        { title: "Upload Data", url: "/faculty/upload", icon: Upload },
-        { title: "Marks Upload", url: "/faculty/marks", icon: ClipboardList },
         { title: "Reports", url: "/faculty/reports", icon: FileText },
       ],
     },

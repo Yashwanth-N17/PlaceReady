@@ -76,7 +76,7 @@ export const NotificationBell = ({ role }: Props) => {
               <div className="p-8 text-center text-sm text-muted-foreground">No notifications.</div>
             ) : (
               items.map((n) => {
-                const Icon = ICONS[n.type];
+                const Icon = ICONS[n.type] || Bell;
                 return (
                   <motion.button
                     key={n.id}

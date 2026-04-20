@@ -1,65 +1,60 @@
 import axios from 'axios';
+import FormData from 'form-data';
 
-/**
- * AI Service for Placement Predictions
- */
+const AI_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
 export const AIService = {
   /**
-   * Predicts a student's readiness score based on multiple metrics.
-   * Uses Gemini-1.5-Flash or similar for high-speed analysis.
+   * Proxies readiness prediction to the Python AI Service.
    */
   async predictReadiness(studentData) {
-    const {
-      scores,          // Array of test scores
-      weakAreas,       // Array of subjects with low performance
-      cgpa,
-      focusLossCount,  // Proxy for discipline
-      branch
-    } = studentData;
-
     try {
-      // If no API key is set, fallback to a smart weighted algorithm
-      if (!process.env.GEMINI_API_KEY) {
-        console.warn("GEMINI_API_KEY not found. Using fallback weighted algorithm.");
-        const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 60;
-        const weightedScore = (avgScore * 0.6) + (cgpa * 10 * 0.3) - (focusLossCount * 2);
-        return {
-          score: Math.min(Math.max(weightedScore, 0), 100),
-          feedback: "Readiness calculated via weighted metrics. Connect Gemini API for deep qualitative analysis."
-        };
-      }
-
-      // Gemini API call (Example implementation)
-      const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-        {
-          contents: [{
-            parts: [{
-              text: `Analyze this engineering student's placement readiness:
-              - Average Test Scores: ${scores.join(', ')}
-              - Weak Areas: ${weakAreas.join(', ')}
-              - CGPA: ${cgpa}
-              - Focus Loss (Discipline): ${focusLossCount}
-              - Branch: ${branch}
-              
-              Predict a readiness score (0-100) and provide a 1-sentence growth tip. 
-              Output format: JSON { "score": number, "tip": "string" }`
-            }]
-          }]
-        }
-      );
-
-      const resultText = response.data.candidates[0].content.parts[0].text;
-      const result = JSON.parse(resultText.replace(/```json|```/g, ""));
-      
+      const response = await axios.post(`${AI_URL}/predict-readiness`, studentData);
       return {
-        score: result.score,
-        feedback: result.tip
+        score: response.data.score,
+        feedback: response.data.tip || "Keep practicing your core skills."
       };
     } catch (error) {
-      console.error("AI Prediction Error:", error);
-      // Fail gracefully
-      return { score: studentData.currentScore || 60, feedback: "Unable to reach AI service." };
+      console.error("AI Bridge Prediction Error:", error.message);
+      // Fallback to weighted algorithm if AI service is down
+      const { scores, cgpa, focusLossCount } = studentData;
+      const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 60;
+      const weightedScore = (avgScore * 0.6) + (cgpa * 10 * 0.3) - (focusLossCount * 2);
+      
+      return {
+        score: Math.min(Math.max(weightedScore, 0), 100),
+        feedback: "Readiness estimate (Service Offline)."
+      };
+    }
+  },
+
+  /**
+   * Proxies document extraction to the Python AI Service.
+   */
+  async extractQuestions(fileBuffer, filename) {
+    try {
+      const formData = new FormData();
+      formData.append('file', fileBuffer, { filename });
+
+      const response = await axios.post(`${AI_URL}/extract-questions`, formData, {
+        headers: formData.getHeaders(),
+        timeout: 60000 // 60s for AI processing
+      });
+
+      if (!response.data.success) throw new Error("AI extraction failed");
+
+      // Map Python model back to Node Question structure
+      return response.data.questions.map(q => ({
+        text: q.question_text || q.text,
+        answer: q.answer,
+        options: q.options,
+        tags: q.tags,
+        difficulty: q.difficulty || "Medium",
+        type: q.type || "MCQ"
+      }));
+    } catch (err) {
+      console.error("AI Bridge Extraction Error:", err.message);
+      throw new Error("AI Service failed to parse document");
     }
   }
 };

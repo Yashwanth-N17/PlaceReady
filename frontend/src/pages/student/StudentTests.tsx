@@ -26,8 +26,8 @@ const StudentTests = () => {
     StudentAPI.results().then(setResults);
   }, []);
 
-  const upcoming = tests.filter((t) => t.status === "upcoming" && (searchTerm === "" || t.title.toLowerCase().includes(searchTerm.toLowerCase())));
-  const completed = tests.filter((t) => t.status === "completed" && (searchTerm === "" || t.title.toLowerCase().includes(searchTerm.toLowerCase())));
+  const upcoming = tests.filter((t) => !t.hasAttempted && (searchTerm === "" || t.title.toLowerCase().includes(searchTerm.toLowerCase())));
+  const completed = tests.filter((t) => t.hasAttempted && (searchTerm === "" || t.title.toLowerCase().includes(searchTerm.toLowerCase())));
 
   return (
     <DashboardLayout 
@@ -35,8 +35,8 @@ const StudentTests = () => {
       title="Assessment Portal" 
       subtitle="Track your mastery, participate in mock drills, and boost your behavioral readiness scores."
     >
-      <div className="flex flex-col md:flex-row gap-6 mb-8 items-start md:items-center justify-between">
-        <Tabs defaultValue="upcoming" className="w-full md:w-auto">
+      <Tabs defaultValue="upcoming" className="w-full">
+        <div className="flex flex-col md:flex-row gap-6 mb-8 items-start md:items-center justify-between">
           <TabsList className="bg-secondary/30 backdrop-blur-md p-1 h-12 rounded-xl border border-white/5">
             <TabsTrigger value="upcoming" className="rounded-lg px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">
               Live & Upcoming
@@ -45,22 +45,20 @@ const StudentTests = () => {
               Past Performance
             </TabsTrigger>
           </TabsList>
-        </Tabs>
 
-        <div className="relative w-full md:w-72 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search assessments..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-secondary/20 border border-white/5 rounded-xl h-12 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all backdrop-blur-sm"
-          />
+          <div className="relative w-full md:w-72 group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Search assessments..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-secondary/20 border border-white/5 rounded-xl h-12 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all backdrop-blur-sm"
+            />
+          </div>
         </div>
-      </div>
 
-      <AnimatePresence mode="wait">
-        <Tabs defaultValue="upcoming" className="w-full">
+        <AnimatePresence mode="wait">
           <TabsContent value="upcoming" className="mt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {upcoming.length === 0 && (
@@ -74,7 +72,7 @@ const StudentTests = () => {
               )}
               {upcoming.map((t, i) => (
                 <motion.div
-                  key={t.id}
+                  key={t.id || `upcoming-${i}`}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.1 }}
@@ -135,11 +133,11 @@ const StudentTests = () => {
           <TabsContent value="completed" className="mt-0">
             <div className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {completed.map((t) => {
+                {completed.map((t, idx) => {
                   const r = results.find((x) => x.id === t.id);
                   if (!r) return null;
                   return (
-                    <div key={t.id} className="glass-card rounded-3xl p-6 border-white/5 hover:bg-white/[0.02] transition-colors">
+                    <div key={t.id || `comp-${idx}`} className="glass-card rounded-3xl p-6 border-white/5 hover:bg-white/[0.02] transition-colors">
                       <div className="flex items-start justify-between gap-6">
                         <div className="flex-1 space-y-4">
                           <div className="flex items-center gap-3">
@@ -156,19 +154,29 @@ const StudentTests = () => {
                             <div className="space-y-1">
                               <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Accuracy</p>
                               <div className="flex items-center gap-2">
-                                <span className={cn(
-                                  "font-display font-bold text-xl",
-                                  r.score >= 80 ? "text-success" : r.score >= 50 ? "text-warning" : "text-destructive"
-                                )}>{r.score}%</span>
-                                <div className="h-1.5 w-16 bg-white/5 rounded-full overflow-hidden">
-                                  <div className="h-full bg-success" style={{ width: `${r.score}%` }} />
-                                </div>
+                                {r.isReleased ? (
+                                  <>
+                                    <span className={cn(
+                                      "font-display font-bold text-xl",
+                                      (r.score as number) >= 80 ? "text-success" : (r.score as number) >= 50 ? "text-warning" : "text-destructive"
+                                    )}>{r.score}%</span>
+                                    <div className="h-1.5 w-16 bg-white/5 rounded-full overflow-hidden">
+                                      <div className="h-full bg-success" style={{ width: `${r.score}%` }} />
+                                    </div>
+                                  </>
+                                ) : (
+                                  <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">Pending Review</Badge>
+                                )}
                               </div>
                             </div>
                             <div className="w-px h-10 bg-white/5" />
                             <div className="space-y-1">
                               <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Rank</p>
-                              <p className="font-display font-bold text-xl text-primary">{r.percentile}th <span className="text-[10px] text-muted-foreground">%tile</span></p>
+                              {r.isReleased ? (
+                                <p className="font-display font-bold text-xl text-primary">{r.percentile}th <span className="text-[10px] text-muted-foreground">%tile</span></p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground italic">Updating...</p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -176,7 +184,7 @@ const StudentTests = () => {
                         <div className="flex flex-col items-end gap-2 text-right">
                            <div className="h-12 w-12 rounded-full border-2 border-white/10 flex items-center justify-center flex-col">
                              <span className="text-[10px] font-bold text-muted-foreground">Q</span>
-                             <span className="text-xs font-bold leading-none">{r.correct}/{r.total}</span>
+                             <span className="text-xs font-bold leading-none">{r.isReleased ? `${r.correct}/${r.total}` : "?"}</span>
                            </div>
                            <p className="text-[10px] text-muted-foreground font-medium tabular-nums flex items-center gap-1">
                              <Clock className="h-3 w-3" /> {r.timeTakenMin}m elapsed
@@ -225,20 +233,26 @@ const StudentTests = () => {
                             <Badge variant="outline" className="border-secondary/50 text-[10px]">{r.subject}</Badge>
                           </td>
                           <td className="p-6">
-                            <span className="font-display font-bold text-lg">{r.score}%</span>
+                            <span className="font-display font-bold text-lg">{r.isReleased ? `${r.score}%` : "---"}</span>
                           </td>
                           <td className="p-6">
                             <div className="flex items-center gap-2">
                                <div className="h-1.5 w-12 bg-white/5 rounded-full">
-                                 <div className="h-full bg-primary" style={{ width: '85%' }} />
+                                 <div className="h-full bg-primary" style={{ width: r.isReleased ? '85%' : '0%' }} />
                                </div>
-                               <span className="text-xs font-mono text-primary">85</span>
+                               <span className="text-xs font-mono text-primary">{r.isReleased ? "85" : "---"}</span>
                             </div>
                           </td>
                           <td className="p-6">
                             <div className="flex items-center gap-2">
-                              <div className="h-1.5 w-1.5 rounded-full bg-success shadow-[0_0_8px_rgba(var(--success-rgb),0.5)]" />
-                              <span className="text-[10px] font-bold uppercase tracking-tight text-success">Verified</span>
+                              <div className={cn(
+                                "h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(var(--success-rgb),0.5)]",
+                                r.isReleased ? "bg-success" : "bg-warning animate-pulse"
+                              )} />
+                              <span className={cn(
+                                "text-[10px] font-bold uppercase tracking-tight",
+                                r.isReleased ? "text-success" : "text-warning"
+                              )}>{r.isReleased ? "Verified" : "Pending"}</span>
                             </div>
                           </td>
                           <td className="p-6 text-right">
@@ -254,8 +268,8 @@ const StudentTests = () => {
               </div>
             </div>
           </TabsContent>
-        </Tabs>
-      </AnimatePresence>
+        </AnimatePresence>
+      </Tabs>
     </DashboardLayout>
   );
 };

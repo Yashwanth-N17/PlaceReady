@@ -42,3 +42,18 @@ export const getAttempts = async () => {
   const response = await client.get<{ success: boolean; data: any[] }>("/assessments/attempts");
   return response.data;
 };
+
+export const publishResults = async (id: string) => {
+  const response = await client.post<{ success: boolean; data: any }>(`/assessments/${id}/release`);
+  return response.data;
+};
+
+export const gradeAttempt = async (attemptId: string, payload: { score: number; correctCount: number }) => {
+  const response = await client.post<{ success: boolean; data: any }>(`/assessments/attempts/${attemptId}/grade`, payload);
+  return response.data;
+};
+
+export const getPendingReviews = async () => {
+  const response = await client.get<{ success: boolean; data: any[] }>("/assessments/attempts/pending");
+  return response.data;
+};

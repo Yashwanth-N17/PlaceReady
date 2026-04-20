@@ -8,10 +8,9 @@ import io
 
 app = FastAPI(title="PlaceReady AI Service", description="FastAPI service for Tag Extraction and Gap Analysis")
 
-# Enable CORS for internal communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, restrict to your Node.js backend IP
+    allow_origins=["*"], 
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -53,10 +52,13 @@ async def extract_questions(file: UploadFile = File(...)):
         print(f"Error in extraction process: {e}")
         raise HTTPException(status_code=500, detail=f"AI Extraction Failed: {str(e)}")
 
-@app.post("/extract-tags")
-async def extract_tags(file: UploadFile = File(...)):
-    # Legacy support
-    return await extract_questions(file)
+@app.post("/predict-readiness")
+async def predict_readiness(data: dict):
+    try:
+        analysis = await extractor_service.analyze_readiness(data)
+        return analysis
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

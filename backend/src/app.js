@@ -9,6 +9,7 @@ import assessmentRoutes from "./routes/assessment.routes.js";
 import placementRoutes from "./routes/placement.routes.js";
 import studentRoutes from "./routes/student.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import reportsRoutes from "./routes/reports.routes.js";
 
 const app = express();
 connectToDB();
@@ -29,5 +30,6 @@ app.use("/api/assessments", assessmentRoutes);
 app.use("/api/placement", placementRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/reports", reportsRoutes);
 
 export default app;

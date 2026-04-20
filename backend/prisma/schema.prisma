@@ -17,12 +17,29 @@ model User {
   fullName            String?
   name                String?
   usn                 String?         @unique
+  department          String?
+  subjects            String[]        @default([])
+  mentorId            String?
+  mentor              User?           @relation("Mentees", fields: [mentorId], references: [id])
+  mentees             User[]          @relation("Mentees")
   StudentProfile      StudentProfile?
   questions           Question[]
   createdAssessments  Assessment[]    @relation("CreatedAssessments")
   assignedAssessments Assessment[]    @relation("AssignedAssessments")
   assessmentAttempts  AssessmentAttempt[]
   appliedDrives       PlacementDrive[] @relation("DriveApplications")
+  notifications       Notification[]
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  type      String   @default("INFO") 
+  read      Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 model Question {
@@ -57,6 +74,7 @@ model Assessment {
   createdBy    User       @relation("CreatedAssessments", fields: [createdById], references: [id])
   students     User[]     @relation("AssignedAssessments")
   attempts     AssessmentAttempt[]
+  resultsReleased Boolean  @default(false)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -80,15 +98,24 @@ model AssessmentAttempt {
 }
 
 model Company {
-  id          String           @id @default(uuid())
-  name        String           @unique
-  industry    String?
-  description String?
-  logoUrl     String?
-  website     String?
-  drives      PlacementDrive[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id             String           @id @default(uuid())
+  name           String           @unique
+  role           String?
+  ctc            String?
+  minCgpa        Float?           @default(7.0)
+  minReadiness   Float?           @default(70.0)
+  minApt         Float?           @default(70.0)
+  minCode        Float?           @default(70.0)
+  branches       String[]
+  requiredSkills String[]
+  
+  industry       String?
+  description    String?
+  logoUrl        String?
+  website        String?
+  drives         PlacementDrive[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model PlacementDrive {
@@ -129,6 +156,7 @@ model StudentProfile {
   branch          String?
   semester        Int?
   readinessScore  Float?
+  aiFeedback      String?
   placementStatus String  @default("UNPLACED")
   User            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

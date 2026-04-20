@@ -26,16 +26,21 @@ export const StudentAPI = {
 
   tests: () =>
     withFallback<ScheduledTest[]>(
-      () => apiClient.get("/assessments").then(res => res.data.data.map((t: any) => ({
-        id: t.id,
-        title: t.title,
-        subject: t.subject,
-        type: t.type,
-        durationMin: t.duration,
-        questionsCount: t.questions?.length || 0,
-        date: t.scheduledAt,
-        status: new Date(t.scheduledAt) > new Date() ? "upcoming" : "completed"
-      }))),
+      () => apiClient.get("/assessments").then(res => {
+        const body = res.data;
+        const data = body.data || (Array.isArray(body) ? body : []);
+        return data.map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          subject: t.subject,
+          type: t.type,
+          durationMin: t.durationMin || t.duration,
+          questionsCount: t.questionsCount || 0,
+          date: t.date || t.scheduledAt,
+          status: t.status,
+          hasAttempted: t.hasAttempted
+        }));
+      }),
       []
     ),
 
@@ -51,7 +56,8 @@ export const StudentAPI = {
         timeTakenMin: Math.round(a.timeTaken / 60),
         date: new Date(a.createdAt).toLocaleDateString(),
         percentile: a.percentile ?? 0,
-        status: a.score >= 80 ? "Excellent" : a.score >= 60 ? "Good" : "Needs Work",
+        isReleased: a.isReleased,
+        status: a.isReleased ? (a.score >= 80 ? "Excellent" : a.score >= 60 ? "Good" : "Needs Work") : "Pending Review",
       }))),
       []
     ),
@@ -72,6 +78,9 @@ export const StudentAPI = {
 
   submitQuiz: (testId: string, payload: any) =>
     apiClient.post(`/assessments/${testId}/submit`, payload).then(res => res.data),
+
+  refreshReadiness: () =>
+    apiClient.post("/student/refresh-readiness").then(res => res.data.data),
 
   trainingModules: () =>
     withFallback<TrainingModule[]>(() => apiClient.get("/student/training"), []),
@@ -134,7 +143,7 @@ export const PlacementAPI = {
     apiClient.patch(`/placement/drives/${driveId}/applicants/${studentId}`, { status }).then(res => res.data),
 
   trends: () =>
-    withFallback(() => apiClient.get("/placement/trends"), []),
+    withFallback(() => apiClient.get("/placement/trends").then(res => res.data.data.placementTrends || res.data.data), []),
 };
 
 // ============= REPORTS =============
@@ -147,6 +156,12 @@ export const ReportsAPI = {
 
   skillHeatmap: () =>
     withFallback(() => apiClient.get("/reports/heatmap"), []),
+
+  branchComparison: () =>
+    withFallback(() => apiClient.get("/reports/branch-comparison"), []),
+
+  companyTiers: () =>
+    withFallback(() => apiClient.get("/reports/company-tiers"), []),
 };
 
 // ============= NOTIFICATIONS =============
@@ -160,8 +175,8 @@ export const NotificationsAPI = {
   markRead: (id: string) =>
     apiClient.patch(`/notifications/${id}/read`).then(res => res.data),
 
-  markAllRead: (role: "student" | "faculty" | "placement") =>
-    apiClient.post("/notifications/mark-all-read", { role }).then(res => res.data),
+  markAllRead: () =>
+    apiClient.post("/notifications/mark-all-read").then(res => res.data),
 };
 
 // ============= QUESTIONS =============
@@ -171,13 +186,16 @@ export const QuestionAPI = {
   list: (params?: any) => apiClient.get("/questions", { params }),
 };
 
-import { createAssessment, getAssessments, getAssessmentById, submitAttempt, getAttempts } from "./assessment.api.ts";
+import { createAssessment, getAssessments, getAssessmentById, submitAttempt, getAttempts, publishResults, gradeAttempt, getPendingReviews } from "./assessment.api.ts";
 export const AssessmentAPI = {
   create: createAssessment,
   list: getAssessments,
   getById: getAssessmentById,
   submit: submitAttempt,
   history: getAttempts,
+  publish: publishResults,
+  grade: gradeAttempt,
+  pendingReviews: getPendingReviews,
   assessmentAttempts: (assessmentId: string) =>
     withFallback<any[]>(() => apiClient.get(`/assessments/${assessmentId}/attempts/all`), []),
 };

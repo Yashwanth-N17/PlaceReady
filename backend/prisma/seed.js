@@ -1,148 +1,173 @@
-import { prisma } from "../src/config/db.js";
-import bcrypt from "bcryptjs";
+import { hashPassword } from '../src/utils/hash.js';
+import { prisma } from '../src/config/db.js';
 
 async function main() {
-  const password = await bcrypt.hash("password123", 10);
+  console.log("🚀 Initializing HIGH-DENSITY 6-month data seeding...");
 
-  // --- FACULTY ACCOUNTS ---
-  const faculties = [
-    { email: "faculty1@placeready.com", name: "Dr. Smith" },
-    { email: "faculty2@placeready.com", name: "Prof. Johnson" },
-  ];
+  // 1. Ensure Roles/Faculty
+  const facultyPassword = await hashPassword('password123');
+  const faculty = await prisma.user.upsert({
+    where: { email: 'faculty@placeready.edu' },
+    update: {
+      subjects: ["DSA", "Operating Systems", "Computer Networks", "DBMS"],
+      department: "CSE",
+    },
+    create: {
+      email: 'faculty@placeready.edu',
+      password: facultyPassword,
+      role: 'FACULTY',
+      name: 'Dr. Katherine Miller',
+      fullName: 'Katherine Miller',
+      subjects: ["DSA", "Operating Systems", "Computer Networks", "DBMS"],
+      department: "CSE",
+    },
+  });
 
-  for (const f of faculties) {
-    await prisma.user.upsert({
-      where: { email: f.email },
-      update: { name: f.name, password },
-      create: {
-        email: f.email,
-        name: f.name,
-        password: password,
-        role: "FACULTY",
-      },
-    });
-  }
+  // 2. Create 10 Students with Profiles
+  const branches = ["CSE", "ISE", "ECE", "EEE", "MECH"];
+  const studentPassword = await hashPassword('password123');
+  const studentUsers = [];
 
-  // --- COMPANIES ---
-  const companies = [
-    { name: "Google", industry: "Technology", website: "https://google.com", description: "Global leader in search and AI." },
-    { name: "Meta", industry: "Social Media", website: "https://meta.com", description: "Building the future of social connection." },
-    { name: "Microsoft", industry: "Software", website: "https://microsoft.com", description: "Empowering every person and organization." },
-    { name: "Amazon", industry: "E-commerce", website: "https://amazon.com", description: "Earth's most customer-centric company." },
-  ];
-
-  const dbCompanies = [];
-  for (const c of companies) {
-    const dbC = await prisma.company.upsert({
-      where: { name: c.name },
-      update: c,
-      create: c,
-    });
-    dbCompanies.push(dbC);
-  }
-
-  // --- PLACEMENT DRIVES ---
-  const drives = [
-    { title: "Software Engineer - Graduate", role: "SDE-1", type: "FULL_TIME", status: "ACTIVE", salary: "18-24 LPA", companyId: dbCompanies[0].id, date: new Date("2026-06-15") },
-    { title: "Frontend Developer", role: "Associate Developer", type: "FULL_TIME", status: "UPCOMING", salary: "12-15 LPA", companyId: dbCompanies[1].id, date: new Date("2026-07-20") },
-    { title: "Data Science Intern", role: "Intern", type: "INTERNSHIP", status: "ACTIVE", salary: "50k/month", companyId: dbCompanies[2].id, date: new Date("2026-05-10") },
-  ];
-
-  for (const d of drives) {
-    await prisma.placementDrive.create({
-      data: d
-    });
-  }
-
-  // --- STUDENT ACCOUNTS ---
-  const students = [
-    { email: "student1@placeready.com", name: "Alice Brown", usn: "1PR21CS001" },
-    { email: "student2@placeready.com", name: "Bob Wilson", usn: "1PR21CS002" },
-    { email: "student3@placeready.com", name: "Charlie Davis", usn: "1PR21CS003" },
-  ];
-
-  const facultyNodes = await prisma.user.findMany({ where: { role: "FACULTY" } });
-
-  for (const s of students) {
+  for (let i = 1; i <= 10; i++) {
+    const branch = branches[i % branches.length];
+    const email = `student${i}@placeready.edu`;
+    const usn = `1RV21${branch}${String(i).padStart(3, '0')}`;
+    
     const user = await prisma.user.upsert({
-      where: { email: s.email },
-      update: { name: s.name, usn: s.usn, password },
+      where: { email },
+      update: {},
       create: {
-        email: s.email,
-        name: s.name,
-        usn: s.usn,
-        password: password,
-        role: "STUDENT",
-      },
-    });
-
-    // Student Profile
-    await prisma.studentProfile.upsert({
-      where: { userId: user.id },
-      update: { readinessScore: 78, cgpa: 8.8 },
-      create: {
-        userId: user.id,
-        id: user.id,
-        branch: "Computer Science",
-        semester: 6,
-        readinessScore: 78,
-        cgpa: 8.8
+        email,
+        password: studentPassword,
+        role: 'STUDENT',
+        name: `Student User ${i}`,
+        fullName: `Student User ${i}`,
+        usn,
+        StudentProfile: {
+          create: {
+            id: usn,
+            branch,
+            cgpa: 7.0 + (Math.random() * 2.5),
+            semester: 6,
+            readinessScore: 50 + (Math.random() * 30),
+            aiFeedback: "Continue practicing data structures to improve your readiness score."
+          }
+        }
       }
     });
-
-    // --- CREATE HISTORICAL ASSESSMENTS & ATTEMPTS ---
-    const assessment = await prisma.assessment.create({
-      data: {
-        title: "DBMS & Operating Systems",
-        type: "MOCK",
-        subject: "Computer Science",
-        scheduledAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-        duration: 30,
-        createdById: facultyNodes[0].id,
-        students: { connect: { id: user.id } }
-      }
-    });
-
-    await prisma.assessmentAttempt.create({
-      data: {
-        score: 85,
-        correctCount: 17,
-        totalCount: 20,
-        timeTaken: 1200,
-        focusLossCount: 0,
-        userId: user.id,
-        assessmentId: assessment.id,
-        answers: { "q1": 0, "q2": 1 } // Simple mock response JSON
-      }
-    });
-
-    const assessment2 = await prisma.assessment.create({
-      data: {
-        title: "Aptitude Drill 1",
-        type: "PRACTICE",
-        subject: "General",
-        scheduledAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-        duration: 15,
-        createdById: facultyNodes[1].id,
-        students: { connect: { id: user.id } }
-      }
-    });
-
-    await prisma.assessmentAttempt.create({
-      data: {
-        score: 60,
-        correctCount: 6,
-        totalCount: 10,
-        timeTaken: 800,
-        focusLossCount: 2,
-        userId: user.id,
-        assessmentId: assessment2.id,
-        answers: { "aq1": 2 }
-      }
-    });
+    studentUsers.push(user);
   }
 
-  console.log("✅ Comprehensive real-world seed data generated!");
+  console.log(`✅ Created/Synced 10 Students.`);
+  
+  // Assign first 5 students to faculty as mentees
+  for (let i = 0; i < 5; i++) {
+    await prisma.user.update({
+      where: { id: studentUsers[i].id },
+      data: { mentorId: faculty.id }
+    });
+  }
+  console.log(`✅ Assigned 5 mentees to ${faculty.name}`);
+
+  // 3. Create a Rich Question Bank
+  const categories = [
+    { name: "Aptitude", subjects: ["Quantitative", "Logical Reasoning", "Data Interpretation"] },
+    { name: "Coding", subjects: ["Data Structures", "Algorithms", "Java Programming", "Python Development"] },
+    { name: "Core", subjects: ["Database Mgmt", "Operating Systems", "Networking", "Computer Org"] },
+    { name: "Soft Skills", subjects: ["Business Communication", "HR Interview Prep", "Verbal Ability"] }
+  ];
+
+  const questions = [];
+  for (const cat of categories) {
+    for (const sub of cat.subjects) {
+        for (let k = 1; k <= 3; k++) {
+            const q = await prisma.question.create({
+                data: {
+                    text: `Sample ${sub} Question ${k}?`,
+                    answer: "A",
+                    options: ["A", "B", "C", "D"],
+                    type: cat.name === "Coding" && k === 3 ? "CODING" : "MCQ",
+                    subject: sub,
+                    topic: `${sub} Fundamentals`,
+                    difficulty: k === 1 ? "Easy" : k === 2 ? "Medium" : "Hard",
+                    uploadedById: faculty.id,
+                    isVisible: true
+                }
+            });
+            questions.push(q);
+        }
+    }
+  }
+  console.log(`✅ Generated ${questions.length} Questions for the library.`);
+
+  // 4. Create Assessments Spread Over 6 Months
+  // 3 tests per month for 6 months = 18 tests
+  const now = new Date();
+  const assessments = [];
+  
+  for (let m = 5; m >= 0; m--) { // Last 6 months
+    for (let t = 1; t <= 3; t++) { // 3 tests per month
+        const date = new Date(now);
+        date.setMonth(now.getMonth() - m);
+        date.setDate(t * 7); // Spread across month (7th, 14th, 21st)
+        
+        const cat = categories[(m + t) % categories.length];
+        const sub = cat.subjects[t % cat.subjects.length];
+
+        const assessment = await prisma.assessment.create({
+            data: {
+                title: `${sub} - ${m === 0 ? 'Current' : m + ' Months Ago'} Challenge`,
+                type: cat.name.toUpperCase(),
+                subject: sub,
+                scheduledAt: date,
+                duration: 45,
+                createdById: faculty.id,
+                questions: {
+                    connect: questions.filter(q => q.subject === sub).map(q => ({ id: q.id }))
+                }
+            }
+        });
+        assessments.push(assessment);
+    }
+  }
+  console.log(`✅ Created ${assessments.length} Historical Assessments.`);
+
+  // 5. Generate Dense Attempts (Simulate growth)
+  let totalAttempts = 0;
+  for (const student of studentUsers) {
+    for (let i = 0; i < assessments.length; i++) {
+        const ass = assessments[i];
+        
+        // Students take about 80% of tests
+        if (Math.random() > 0.8) continue;
+
+        // Simulate score progression: 
+        // month 5 ago -> base 40
+        // month 0 ago -> base 75
+        const monthIndex = 5 - Math.floor(i / 3); // 0 to 5 (0 is oldest)
+        const base = 40 + (monthIndex * 8); // 40, 48, 56, 64, 72, 80
+        const randomFactor = Math.random() * 20;
+        const score = Math.min(100, Math.round(base + randomFactor));
+
+        await prisma.assessmentAttempt.create({
+            data: {
+                score,
+                correctCount: Math.round(score/10),
+                totalCount: 10,
+                timeTaken: 15 * 60, 
+                focusLossCount: Math.floor(Math.random() * 4),
+                answers: { "seed": true },
+                userId: student.id,
+                assessmentId: ass.id,
+                createdAt: new Date(ass.scheduledAt.getTime() + (2 * 3600000)) // 2 hours later
+            }
+        });
+        totalAttempts++;
+    }
+  }
+
+  console.log(`✅ Generated ${totalAttempts} Attempts across the last 6 months.`);
+  console.log("✨ DENSE SEEDING COMPLETE. Charts will now look spectacular!");
 }
 
 main()

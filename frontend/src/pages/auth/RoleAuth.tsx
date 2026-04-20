@@ -35,7 +35,8 @@ export const RoleAuth = ({ role, title, subtitle, icon: Icon, redirectTo, accent
         password,
         role: role.toUpperCase() 
       });
-      const { token, user } = response.data;
+      const payload = response.data;
+      const { token, user } = payload.data || payload; // Unpack standardized response if present
       
       localStorage.setItem("accessToken", token);
       localStorage.setItem("userRole", user.role);

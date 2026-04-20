@@ -78,6 +78,11 @@ export async function resetPasswordByEmail(email, newPassword) {
 export async function getUserProfile(userId) {
   return await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, role: true, createdAt: true },
+    select: { 
+      id: true, email: true, role: true, fullName: true, department: true, usn: true,
+      StudentProfile: {
+        select: { cgpa: true, readinessScore: true, branch: true, placementStatus: true }
+      }
+    },
   });
 }

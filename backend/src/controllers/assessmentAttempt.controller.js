@@ -37,3 +37,36 @@ export const getAssessmentAttempts = async (req, res) => {
     return error(res, "Failed to fetch attempts", 500, err);
   }
 };
+
+export const updateAttemptMarks = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+    const attempt = await AssessmentService.assignMarks(attemptId, req.body);
+    return success(res, attempt, "Marks updated and readiness recalculated");
+  } catch (err) {
+    return error(res, "Failed to update marks", 500, err);
+  }
+};
+
+export const getPendingAttempts = async (req, res) => {
+  try {
+    const { id: facultyId } = req.user;
+    const attempts = await prisma.assessmentAttempt.findMany({
+      where: {
+        assessment: {
+          createdById: facultyId,
+          resultsReleased: false
+        }
+      },
+      include: {
+        user: { select: { id: true, name: true, roll: true, usn: true } },
+        assessment: { select: { id: true, title: true, subject: true } }
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10
+    });
+    return success(res, attempts);
+  } catch (err) {
+    return error(res, "Failed to fetch pending reviews", 500, err);
+  }
+};

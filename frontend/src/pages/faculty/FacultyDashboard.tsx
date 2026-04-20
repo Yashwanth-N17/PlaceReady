@@ -13,10 +13,10 @@ import {
 } from "recharts";
 import {
   Users, TrendingUp, AlertTriangle, Trophy, Search, ArrowUpRight,
-  CalendarDays, Sparkles,
+  CalendarDays, Sparkles, ClipboardList,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { FacultyAPI } from "@/api";
+import { FacultyAPI, AssessmentAPI } from "@/api";
 import { toast } from "sonner";
 import type { StudentRecord, FacultyMember } from "@/data/mock";
 
@@ -68,6 +68,7 @@ const FacultyDashboard = () => {
   const [batch, setBatch] = useState("CSE-A");
   const [search, setSearch] = useState("");
   const [scopeMentees, setScopeMentees] = useState(true);
+  const [pendingReviews, setPendingReviews] = useState<any[]>([]);
 
   useEffect(() => {
     FacultyAPI.me().then(data => {
@@ -77,12 +78,15 @@ const FacultyDashboard = () => {
     FacultyAPI.students().then(setAllStudents);
     FacultyAPI.batchPerformance().then(setBatchPerf);
     FacultyAPI.skillGaps().then(setGaps);
+    AssessmentAPI.pendingReviews().then(res => {
+      if (res.success) setPendingReviews(res.data);
+    });
   }, []);
 
   const inScope = useMemo(() => {
     if (!me) return [];
     if (scopeMentees) {
-      return allStudents.filter((s) => (me as any).menteeIds?.includes(s.roll) || (me as any).menteeIds?.includes(s.id) || true);
+      return allStudents.filter((s) => me.menteeIds?.includes(s.id));
     }
     return allStudents;
   }, [allStudents, me, scopeMentees]);
@@ -104,7 +108,7 @@ const FacultyDashboard = () => {
     <DashboardLayout
       role="faculty"
       title={me && me.name ? `Welcome back, Prof. ${me.name.split(" ").slice(-1)[0]}` : "Faculty Workspace"}
-      subtitle={me ? `${(me as any).department || "CSE"} Department` : "Manage your students and assessments"}
+      subtitle={me ? `${me.department || "CSE"} Department` : "Manage your students and assessments"}
       actions={
         <Link to="/faculty/schedule">
           <Button variant="outline" size="sm" className="h-8 text-xs border-border/60 hover:border-primary/40">
@@ -243,6 +247,40 @@ const FacultyDashboard = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* ── Pending Reviews ── */}
+      {pendingReviews.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-2 mb-4 px-1">
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <h3 className="font-display font-semibold text-sm">Action Required: Submissions Pending Review</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pendingReviews.map((rev) => (
+              <div key={rev.id} className="glass-card p-4 rounded-xl border-primary/20 bg-primary/5 flex items-center justify-between group hover:border-primary/40 transition-shadow">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center text-primary border border-primary/10 shrink-0">
+                    <ClipboardList className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{rev.user?.name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wider">{rev.assessment?.title}</p>
+                  </div>
+                </div>
+                <Link to={`/faculty/review?attemptId=${rev.id}`}>
+                  <Button size="sm" variant="ghost" className="h-8 text-xs text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Review <ArrowUpRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* ── Students table ── */}
       <motion.div

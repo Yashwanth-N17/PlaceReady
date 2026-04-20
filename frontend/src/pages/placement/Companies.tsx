@@ -138,7 +138,7 @@ const Companies = () => {
             <div className="grid grid-cols-2 gap-2 mt-4 text-xs">
               <div className="rounded bg-secondary/40 px-2 py-1.5"><span className="text-muted-foreground">CGPA</span> <span className="font-semibold float-right">{c.minCgpa}+</span></div>
               <div className="rounded bg-secondary/40 px-2 py-1.5"><span className="text-muted-foreground">Readiness</span> <span className="font-semibold float-right">{c.minReadiness}+</span></div>
-              <div className="rounded bg-secondary/40 px-2 py-1.5"><span className="text-muted-foreground">Aptitude</span> <span className="font-semibold float-right">{c.minCgpa}+</span></div>
+              <div className="rounded bg-secondary/40 px-2 py-1.5"><span className="text-muted-foreground">Aptitude</span> <span className="font-semibold float-right">{c.minApt}+</span></div>
               <div className="rounded bg-secondary/40 px-2 py-1.5"><span className="text-muted-foreground">Coding</span> <span className="font-semibold float-right">{c.minCode}+</span></div>
             </div>
             <div className="mt-3 flex flex-wrap gap-1">

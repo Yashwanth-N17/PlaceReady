@@ -2,65 +2,59 @@ import { prisma } from "../config/db.js";
 import { timeAgo } from "../utils/time.js";
 
 export const NotificationService = {
-  async getUserNotifications(userId, role) {
-    const notifications = [];
+  async getUserNotifications(userId) {
+    const dbNotifications = await prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 20
+    });
 
-    // 1. Upcoming Assessments (STUDENT)
+    return dbNotifications.map(n => ({
+      ...n,
+      body: n.message, // Map DB 'message' to frontend 'body'
+      time: timeAgo(n.createdAt)
+    }));
+  },
+
+  async createNotification(userId, data) {
+    return await prisma.notification.create({
+      data: {
+        userId,
+        title: data.title,
+        message: data.message,
+        type: data.type || "INFO"
+      }
+    });
+  },
+
+  async markAsRead(notificationId) {
+    return await prisma.notification.update({
+      where: { id: notificationId },
+      data: { read: true }
+    });
+  },
+
+  async markAllAsRead(userId) {
+    return await prisma.notification.updateMany({
+      where: { userId },
+      data: { read: true }
+    });
+  },
+
+  /**
+   * Syncs dynamic alerts into the database (one-time or periodic)
+   */
+  async syncDynamicAlerts(userId, role) {
+    // This can be called to ensure fresh DB records exist for events
+    // For now, we'll implement a logic that auto-creates notifications for new assessments
     if (role === "STUDENT") {
-      const upcoming = await prisma.assessment.findMany({
-        where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
-        take: 5,
-        orderBy: { createdAt: "desc" }
+      const assessments = await prisma.assessment.findMany({
+        where: { 
+          createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          notifications: { none: { userId } } // Logic needs a link or simplified check
+        }
       });
-      upcoming.forEach(a => {
-        notifications.push({
-          id: `test-${a.id}`,
-          title: "New Assessment Scheduled",
-          message: `${a.title} is now active in ${a.subject}.`,
-          time: timeAgo(a.createdAt),
-          type: "test",
-          read: false
-        });
-      });
-
-      // 2. Recent Results
-      const results = await prisma.assessmentAttempt.findMany({
-        where: { userId },
-        include: { assessment: { select: { title: true } } },
-        take: 3,
-        orderBy: { createdAt: "desc" }
-      });
-      results.forEach(r => {
-        notifications.push({
-          id: `res-${r.id}`,
-          title: "Result Published",
-          message: `You scored ${Math.round(r.score)}% in ${r.assessment.title}.`,
-          time: timeAgo(r.createdAt),
-          type: "result",
-          read: true
-        });
-      });
+      // Simplified: Just return what's in DB for now to keep it clean
     }
-
-    // 3. Drive Updates (FACULTY / PLACEMENT)
-    if (role === "FACULTY" || role === "PLACEMENT") {
-      const drives = await prisma.placementDrive.findMany({
-        include: { company: true },
-        take: 3,
-        orderBy: { createdAt: "desc" }
-      });
-      drives.forEach(d => {
-        notifications.push({
-          id: `dr-${d.id}`,
-          title: "Drive Update",
-          message: `${d.company.name} drive is scheduled for ${new Date(d.date).toLocaleDateString()}.`,
-          time: timeAgo(d.createdAt),
-          type: "drive",
-          read: false
-        });
-      });
-    }
-
-    return notifications;
   }
 };

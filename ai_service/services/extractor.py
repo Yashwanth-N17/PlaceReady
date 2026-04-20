@@ -15,13 +15,17 @@ class QuestionInfo(BaseModel):
     difficulty: Optional[str] = "Medium"
     type: Optional[str] = "MCQ"
 
-class AssessmentExtraction(BaseModel):
-    subject: Optional[str] = "Technical Assessment"
-    topic: Optional[str] = ""
-    total_questions: Optional[int] = 0
-    questions: Optional[List[QuestionInfo]] = []
-    overall_difficulty: Optional[str] = "Medium"
     suggested_curriculum_gaps: Optional[List[str]] = []
+
+class ReadinessAnalysis(BaseModel):
+    score: float = Field(..., ge=0, le=100)
+    tip: str = Field(..., description="A short, actionable growth tip")
+    weak_areas: List[str] = []
+
+class AssessmentExtraction(BaseModel):
+    subject: str = Field(..., description="The main subject of the assessment")
+    topic: str = Field(..., description="The specific topic or chapter")
+    questions: List[QuestionInfo] = []
 
 class GapsExtractor:
     def __init__(self):
@@ -58,6 +62,31 @@ class GapsExtractor:
             
         except Exception as e:
             print(f"!!! AI ENGINE ERROR !!!: {e}")
+            raise e
+
+    async def analyze_readiness(self, data: dict) -> ReadinessAnalysis:
+        prompt = f"""
+        Analyze this engineering student's placement readiness:
+        - Average Test Scores: {data.get('scores', [])}
+        - Weak Areas: {data.get('weakAreas', [])}
+        - CGPA: {data.get('cgpa', 0)}
+        - Focus Loss (Discipline): {data.get('focusLossCount', 0)}
+        - Branch: {data.get('branch', 'General')}
+        
+        Predict a readiness score (0-100) and provide a 1-sentence growth tip.
+        """
+        try:
+            response = self.client.models.generate_content(
+                model=self.model_id,
+                contents=prompt,
+                config={
+                    'response_mime_type': 'application/json',
+                    'response_schema': ReadinessAnalysis,
+                }
+            )
+            return ReadinessAnalysis.model_validate_json(response.text)
+        except Exception as e:
+            print(f"Readiness Analysis Error: {e}")
             raise e
 
 extractor_service = GapsExtractor()
